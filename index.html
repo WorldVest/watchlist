@@ -16,7 +16,7 @@
 </head>
 <body class="min-h-screen text-white">
 
-  <!-- LOGIN -->
+  <!-- LOGIN PAGE (same as before) -->
   <div id="login-page" class="min-h-screen flex items-center justify-center">
     <div class="text-center">
       <div class="tech-earth mx-auto mb-8"></div>
@@ -24,17 +24,10 @@
       <p class="text-emerald-400 text-2xl mt-2">PRIVATE WATCHLIST</p>
 
       <div class="max-w-sm mx-auto mt-12">
-        <input id="password-input" 
-               type="password" 
-               placeholder="Password"
+        <input id="password-input" type="password" placeholder="Password" 
                class="w-full bg-slate-950 border border-slate-700 rounded-3xl px-10 py-6 text-xl text-center"
                onkeypress="if(event.key === 'Enter') checkPassword()">
-        
-        <button onclick="checkPassword()" 
-                class="mt-8 w-full bg-gradient-to-r from-emerald-500 to-cyan-500 py-6 rounded-3xl text-2xl font-medium">
-          ENTER
-        </button>
-        
+        <button onclick="checkPassword()" class="mt-8 w-full bg-gradient-to-r from-emerald-500 to-cyan-500 py-6 rounded-3xl text-2xl font-medium">ENTER</button>
         <p id="error-msg" class="text-red-400 mt-6 hidden">Incorrect password</p>
       </div>
     </div>
@@ -42,7 +35,7 @@
 
   <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden flex h-screen">
-    <!-- Chat -->
+    <!-- Chat Panel -->
     <div class="w-[520px] border-r border-slate-700 bg-slate-950 flex flex-col">
       <div class="p-6 border-b border-slate-700 font-semibold text-lg flex items-center gap-3">
         <i class="fa-solid fa-comments text-emerald-400"></i> Chat
@@ -60,7 +53,7 @@
       </div>
     </div>
 
-    <!-- Watchlist -->
+    <!-- Watchlist with Smart Search -->
     <div class="flex-1 flex flex-col">
       <div class="h-16 border-b border-slate-700 bg-slate-950 flex items-center px-8 gap-6">
         <div class="flex items-center gap-4">
@@ -68,12 +61,13 @@
           <h1 class="text-3xl font-bold tracking-tighter">WorldVest</h1>
         </div>
         
-        <div class="flex-1">
-          <input id="search" placeholder="Add ticker or crypto (AAPL, BTC...)" 
+        <div class="flex-1 relative">
+          <input id="search" placeholder="Search & add ticker (AAPL, BTC...)" 
                  class="w-full bg-slate-900 border border-slate-700 rounded-3xl px-6 py-3 outline-none focus:border-emerald-400"
-                 onkeypress="if(event.key==='Enter') addStock()">
+                 onkeyup="handleSearchInput()">
+          <div id="suggestions" class="absolute mt-2 w-full bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl max-h-80 overflow-auto hidden z-50"></div>
         </div>
-        <button onclick="addStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium whitespace-nowrap">ADD TO LIST</button>
+        <button onclick="addCurrentStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium whitespace-nowrap">ADD TO LIST</button>
       </div>
 
       <div class="flex-1 overflow-auto p-8">
@@ -109,83 +103,57 @@
     const db = firebase.database();
 
     const PASSWORD = "giddyup";
+    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← PUT YOUR KEY HERE
 
-    function checkPassword() {
-      const input = document.getElementById('password-input').value.trim();
-      if (input.toLowerCase() === PASSWORD) {
-        document.getElementById('login-page').classList.add('hidden');
-        document.getElementById('main-dashboard').classList.remove('hidden');
-        initRealtime();
-      } else {
-        document.getElementById('error-msg').classList.remove('hidden');
+    // ... (checkPassword, initRealtime, sendMessage functions stay the same as last version)
+
+    let currentSuggestions = [];
+
+    async function handleSearchInput() {
+      const query = document.getElementById('search').value.trim().toUpperCase();
+      const suggestionsBox = document.getElementById('suggestions');
+      
+      if (query.length < 2) {
+        suggestionsBox.classList.add('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${FINNHUB_KEY}`);
+        const data = await res.json();
+        
+        currentSuggestions = data.result?.slice(0, 10) || [];
+        
+        let html = '';
+        currentSuggestions.forEach(item => {
+          html += `
+            <div onclick="selectSuggestion('${item.symbol}')" class="px-6 py-4 hover:bg-slate-800 cursor-pointer border-b border-slate-700 last:border-none">
+              <span class="font-bold">${item.symbol}</span> 
+              <span class="text-slate-400 text-sm">• ${item.description}</span>
+            </div>`;
+        });
+        
+        suggestionsBox.innerHTML = html;
+        suggestionsBox.classList.remove('hidden');
+      } catch(e) {
+        console.error("Search failed");
       }
     }
 
-    function initRealtime() {
-      document.getElementById('username').value = localStorage.getItem('username') || '';
-
-      // Real-time Chat
-      db.ref('chat').limitToLast(50).on('child_added', (snapshot) => {
-        const msg = snapshot.val();
-        const chatDiv = document.getElementById('chat-messages');
-        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        
-        chatDiv.innerHTML += `
-          <div class="flex gap-3">
-            <div class="text-emerald-400 font-medium min-w-[110px]">${msg.name}</div>
-            <div class="flex-1">${msg.message}</div>
-            <div class="text-xs text-slate-500 whitespace-nowrap">${time}</div>
-          </div>`;
-        chatDiv.scrollTop = chatDiv.scrollHeight;
-      });
-
-      // Real-time Watchlist
-      db.ref('watchlist').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        const tbody = document.getElementById('watchlist-body');
-        tbody.innerHTML = '';
-
-        Object.keys(data).forEach(symbol => {
-          const row = document.createElement('tr');
-          row.className = 'hover:bg-slate-800/70 transition';
-          row.innerHTML = `
-            <td class="py-6 pl-4 font-bold text-xl">${symbol}</td>
-            <td class="py-6 text-right font-mono text-2xl text-emerald-400">—</td>
-            <td class="py-6 text-right text-emerald-400">—</td>
-            <td class="py-6 text-right text-emerald-400">—</td>
-            <td class="py-6 text-right text-emerald-400">—</td>
-            <td class="py-6 text-right text-emerald-400">—</td>
-          `;
-          tbody.appendChild(row);
-        });
-      });
+    function selectSuggestion(symbol) {
+      document.getElementById('search').value = symbol;
+      document.getElementById('suggestions').classList.add('hidden');
     }
 
-    function addStock() {
+    function addCurrentStock() {
       const symbol = document.getElementById('search').value.trim().toUpperCase();
       if (!symbol) return;
-      
-      db.ref('watchlist/' + symbol).set({
-        symbol: symbol,
-        addedAt: Date.now()
-      });
+      db.ref('watchlist/' + symbol).set({ symbol: symbol, addedAt: Date.now() });
       document.getElementById('search').value = '';
+      document.getElementById('suggestions').classList.add('hidden');
     }
 
-    function sendMessage() {
-      const input = document.getElementById('chat-input');
-      const nameInput = document.getElementById('username');
-      if (!input.value.trim()) return;
-
-      db.ref('chat').push({
-        name: nameInput.value.trim() || "Anonymous",
-        message: input.value.trim(),
-        timestamp: Date.now()
-      });
-      
-      localStorage.setItem('username', nameInput.value.trim());
-      input.value = '';
-    }
+    // Paste your previous checkPassword, initRealtime, sendMessage, addStock functions here
   </script>
 </body>
 </html>

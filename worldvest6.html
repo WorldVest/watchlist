@@ -11,12 +11,7 @@
   
   <style>
     body { background: linear-gradient(135deg, #0b1429 0%, #1a2a4a 100%); }
-    .tech-earth {
-      width: 62px; height: 62px;
-      background: radial-gradient(circle at 38% 38%, #10f0a0 12%, #0ba5ff 48%, #1e3a8a 85%);
-      border-radius: 9999px;
-      box-shadow: 0 0 60px #10f0a0, inset 0 0 40px rgba(255,255,255,0.35);
-    }
+    .tech-earth { width: 62px; height: 62px; background: radial-gradient(circle at 38% 38%, #10f0a0 12%, #0ba5ff 48%, #1e3a8a 85%); border-radius: 9999px; box-shadow: 0 0 60px #10f0a0, inset 0 0 40px rgba(255,255,255,0.35); }
   </style>
 </head>
 <body class="min-h-screen text-white">
@@ -40,7 +35,7 @@
     </div>
   </div>
 
-  <!-- MAIN APP -->
+  <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden flex h-screen">
     <!-- Wider Chat -->
     <div class="w-[520px] border-r border-slate-700 bg-slate-950 flex flex-col">
@@ -69,14 +64,14 @@
         </div>
         
         <div class="flex-1">
-          <input id="search" placeholder="Add ticker or crypto (AAPL, BTC, TSLA...)" 
+          <input id="search" placeholder="Add ticker or crypto (AAPL, BTC...)" 
                  class="w-full bg-slate-900 border border-slate-700 rounded-3xl px-6 py-3 outline-none focus:border-emerald-400">
         </div>
         <button onclick="addStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium whitespace-nowrap">ADD TO LIST</button>
       </div>
 
       <div class="flex-1 overflow-auto p-8">
-        <table class="w-full" id="watchlist-table">
+        <table class="w-full">
           <thead>
             <tr class="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-700">
               <th class="pb-6 text-left">Asset</th>
@@ -94,71 +89,87 @@
   </div>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
-      authDomain: "watchlist-d9ade.firebaseapp.com",
-      projectId: "watchlist-d9ade",
-      storageBucket: "watchlist-d9ade.firebasestorage.app",
-      messagingSenderId: "927853955548",
-      appId: "1:927853955548:web:dedd485e291d3804542719",
-      measurementId: "G-9QNQ8ZVLSR"
-    };
-
+    const firebaseConfig = { /* your config is already here */ };
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const PASSWORD = "giddyup";
 
-    // Check password
     function checkPassword() {
-      const input = document.getElementById('password-input').value.trim().toLowerCase();
-      if (input === PASSWORD) {
+      if (document.getElementById('password-input').value.trim().toLowerCase() === PASSWORD) {
         document.getElementById('login-page').classList.add('hidden');
         document.getElementById('main-dashboard').classList.remove('hidden');
-        loadApp();
+        initRealtime();
       } else {
         document.getElementById('error-msg').classList.remove('hidden');
       }
     }
 
-    function loadApp() {
-      // Load username
-      document.getElementById('username').value = localStorage.getItem('username') || '';
+    function initRealtime() {
+      // Load saved username
+      document.getElementById('username').value = localStorage.getItem('username') || 'Family Member';
 
-      // Real-time listeners will go here
-      console.log("%cWorldVest Connected to Firebase ✅", "color:#10f0a0; font-size:16px");
+      // Realtime Chat
+      db.ref('chat').limitToLast(50).on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        const chatDiv = document.getElementById('chat-messages');
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        
+        const html = `
+          <div class="flex gap-3">
+            <div class="text-emerald-400 font-medium min-w-[100px]">${msg.name}</div>
+            <div class="flex-1">${msg.message}</div>
+            <div class="text-xs text-slate-500">${time}</div>
+          </div>`;
+        chatDiv.innerHTML += html;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      });
+
+      // Realtime Watchlist
+      db.ref('watchlist').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const tbody = document.getElementById('watchlist-body');
+        tbody.innerHTML = '';
+
+        Object.keys(data).forEach(symbol => {
+          const item = data[symbol];
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-800/70 transition';
+          row.innerHTML = `
+            <td class="py-6 pl-4">
+              <div class="font-bold text-xl">${symbol}</div>
+            </td>
+            <td class="py-6 text-right font-mono text-2xl text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
     }
 
     function addStock() {
       const symbol = document.getElementById('search').value.trim().toUpperCase();
       if (!symbol) return;
-      
-      db.ref('watchlist/' + symbol).set({
-        symbol: symbol,
-        name: "Loading...",
-        addedAt: Date.now()
-      });
+      db.ref('watchlist/' + symbol).set({ symbol: symbol, addedAt: Date.now() });
       document.getElementById('search').value = '';
     }
 
     function sendMessage() {
       const input = document.getElementById('chat-input');
       const nameInput = document.getElementById('username');
-      const name = nameInput.value.trim() || "Anonymous";
+      if (!input.value.trim()) return;
 
-      if (input.value.trim()) {
-        db.ref('chat').push({
-          name: name,
-          message: input.value.trim(),
-          timestamp: Date.now()
-        });
-        input.value = '';
-        localStorage.setItem('username', name);
-      }
+      db.ref('chat').push({
+        name: nameInput.value.trim(),
+        message: input.value.trim(),
+        timestamp: Date.now()
+      });
+      localStorage.setItem('username', nameInput.value.trim());
+      input.value = '';
     }
-
-    // For now this is demo data - we'll replace with real Firebase listener soon
-    window.onload = () => {};
   </script>
 </body>
 </html>

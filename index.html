@@ -16,7 +16,7 @@
 </head>
 <body class="min-h-screen text-white">
 
-  <!-- LOGIN PAGE -->
+  <!-- LOGIN -->
   <div id="login-page" class="min-h-screen flex items-center justify-center">
     <div class="text-center">
       <div class="tech-earth mx-auto mb-8"></div>
@@ -27,7 +27,8 @@
         <input id="password-input" 
                type="password" 
                placeholder="Password"
-               class="w-full bg-slate-950 border border-slate-700 rounded-3xl px-10 py-6 text-xl text-center">
+               class="w-full bg-slate-950 border border-slate-700 rounded-3xl px-10 py-6 text-xl text-center"
+               onkeypress="if(event.key === 'Enter') checkPassword()">
         
         <button onclick="checkPassword()" 
                 class="mt-8 w-full bg-gradient-to-r from-emerald-500 to-cyan-500 py-6 rounded-3xl text-2xl font-medium">
@@ -41,7 +42,7 @@
 
   <!-- MAIN DASHBOARD -->
   <div id="main-dashboard" class="hidden flex h-screen">
-    <!-- Chat Panel -->
+    <!-- Chat -->
     <div class="w-[520px] border-r border-slate-700 bg-slate-950 flex flex-col">
       <div class="p-6 border-b border-slate-700 font-semibold text-lg flex items-center gap-3">
         <i class="fa-solid fa-comments text-emerald-400"></i> Chat
@@ -69,7 +70,8 @@
         
         <div class="flex-1">
           <input id="search" placeholder="Add ticker or crypto (AAPL, BTC...)" 
-                 class="w-full bg-slate-900 border border-slate-700 rounded-3xl px-6 py-3 outline-none focus:border-emerald-400">
+                 class="w-full bg-slate-900 border border-slate-700 rounded-3xl px-6 py-3 outline-none focus:border-emerald-400"
+                 onkeypress="if(event.key==='Enter') addStock()">
         </div>
         <button onclick="addStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium whitespace-nowrap">ADD TO LIST</button>
       </div>
@@ -121,16 +123,68 @@
 
     function initRealtime() {
       document.getElementById('username').value = localStorage.getItem('username') || '';
-      // Chat and Watchlist listeners will be added in the next update
-      console.log("✅ WorldVest loaded successfully");
+
+      // Real-time Chat
+      db.ref('chat').limitToLast(50).on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        const chatDiv = document.getElementById('chat-messages');
+        const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        
+        chatDiv.innerHTML += `
+          <div class="flex gap-3">
+            <div class="text-emerald-400 font-medium min-w-[110px]">${msg.name}</div>
+            <div class="flex-1">${msg.message}</div>
+            <div class="text-xs text-slate-500 whitespace-nowrap">${time}</div>
+          </div>`;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      });
+
+      // Real-time Watchlist
+      db.ref('watchlist').on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const tbody = document.getElementById('watchlist-body');
+        tbody.innerHTML = '';
+
+        Object.keys(data).forEach(symbol => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-slate-800/70 transition';
+          row.innerHTML = `
+            <td class="py-6 pl-4 font-bold text-xl">${symbol}</td>
+            <td class="py-6 text-right font-mono text-2xl text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+            <td class="py-6 text-right text-emerald-400">—</td>
+          `;
+          tbody.appendChild(row);
+        });
+      });
     }
 
     function addStock() {
-      alert("Add stock feature coming in next update");
+      const symbol = document.getElementById('search').value.trim().toUpperCase();
+      if (!symbol) return;
+      
+      db.ref('watchlist/' + symbol).set({
+        symbol: symbol,
+        addedAt: Date.now()
+      });
+      document.getElementById('search').value = '';
     }
 
     function sendMessage() {
-      alert("Chat feature coming in next update");
+      const input = document.getElementById('chat-input');
+      const nameInput = document.getElementById('username');
+      if (!input.value.trim()) return;
+
+      db.ref('chat').push({
+        name: nameInput.value.trim() || "Anonymous",
+        message: input.value.trim(),
+        timestamp: Date.now()
+      });
+      
+      localStorage.setItem('username', nameInput.value.trim());
+      input.value = '';
     }
   </script>
 </body>

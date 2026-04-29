@@ -85,14 +85,22 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← YOUR REAL KEY HERE
+    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ← YOUR REAL KEY HERE
+
+    let isInitialized = false;
 
     function initApp() {
-      console.log("🚀 WorldVest Started - Checking data...");
+      if (isInitialized) return;
+      isInitialized = true;
 
-      db.ref('watchlist').on('value', renderWatchlist);
-      db.ref('prices').on('value', renderWatchlist);
+      console.log("🚀 WorldVest Started");
 
+      // Single listener for watchlist + prices
+      const render = () => renderWatchlist();
+      db.ref('watchlist').on('value', render);
+      db.ref('prices').on('value', render);
+
+      // Chat
       db.ref('chat').limitToLast(100).on('child_added', (snapshot) => {
         const msg = snapshot.val();
         const chatDiv = document.getElementById('chat-messages');
@@ -110,11 +118,11 @@
         const watchlist = snap.val() || {};
         db.ref('prices').once('value', (priceSnap) => {
           const prices = priceSnap.val() || {};
-          console.log("Prices in Firebase:", prices);   // Debug
 
           Object.keys(watchlist).forEach(symbol => {
             const price = prices[symbol] ? prices[symbol].price.toFixed(2) : '—';
             const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-800/70 transition';
             row.innerHTML = `
               <td class="py-6 pl-4 font-bold text-xl">${symbol}</td>
               <td class="py-6 text-right font-mono text-2xl">${price}</td>
@@ -133,7 +141,9 @@
     }
 
     function deleteTicker(symbol) {
-      if (confirm(`Remove ${symbol}?`)) db.ref('watchlist/' + symbol).remove();
+      if (confirm(`Remove ${symbol} from watchlist?`)) {
+        db.ref('watchlist/' + symbol).remove();
+      }
     }
 
     function addCurrentStock() {
@@ -164,17 +174,14 @@
 
       try {
         const res = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${FINNHUB_KEY}`);
-        if (!res.ok) throw new Error("404 or bad key");
         const data = await res.json();
         let html = '';
         (data.result || []).slice(0,10).forEach(item => {
-          html += `<div onclick="selectSuggestion('${item.symbol}')" class="px-6 py-4 hover:bg-slate-800 cursor-pointer border-b border-slate-700">${item.symbol} • ${item.description}</div>`;
+          html += `<div onclick="selectSuggestion('${item.symbol}')" class="px-6 py-4 hover:bg-slate-800 cursor-pointer border-b border-slate-700">${item.symbol} <span class="text-slate-400">• ${item.description}</span></div>`;
         });
         box.innerHTML = html;
         box.classList.remove('hidden');
-      } catch(e) {
-        console.error("Search error:", e);
-      }
+      } catch(e) {}
     }
 
     function selectSuggestion(symbol) {

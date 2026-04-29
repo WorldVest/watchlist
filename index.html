@@ -17,7 +17,6 @@
   :root {
     --bg-0: #05070d;
     --bg-1: #0a0e1a;
-    --bg-2: #0f1524;
     --line: #1a2238;
     --line-bright: #2a3656;
     --text: #d6e1ff;
@@ -27,9 +26,6 @@
     --accent: #00ffae;
     --accent-glow: #00ffae40;
     --warn: #ff5277;
-    --warn-glow: #ff527740;
-    --amber: #ffb547;
-    --cyan: #4ad8ff;
     --gold: #f7b955;
   }
   * { box-sizing: border-box; }
@@ -71,8 +67,7 @@
   .topbar {
     grid-column: 1 / -1;
     border-bottom: 1px solid var(--line);
-    background: rgba(5,7,13,0.85);
-    backdrop-filter: blur(8px);
+    background: rgba(5,7,13,0.85); backdrop-filter: blur(8px);
     display: flex; align-items: center; padding: 0 20px; gap: 22px;
     position: relative;
   }
@@ -240,7 +235,7 @@
     position: sticky; top: 0;
     background: rgba(5,7,13,0.95); backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--line-bright);
-    text-align: right; padding: 14px 12px;
+    text-align: right; padding: 14px 16px;
     font-size: 11px; font-weight: 700;
     letter-spacing: 0.22em;
     color: var(--header);
@@ -262,8 +257,8 @@
   tbody tr.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
 
   tbody td {
-    padding: 16px 12px; text-align: right;
-    font-size: 13px; font-variant-numeric: tabular-nums;
+    padding: 18px 16px; text-align: right;
+    font-size: 14px; font-variant-numeric: tabular-nums;
   }
   tbody td:first-child { padding-left: 24px; text-align: left; }
   tbody td:last-child { padding-right: 24px; }
@@ -277,33 +272,26 @@
   .drag-handle:hover { color: var(--accent); }
   .drag-handle:active { cursor: grabbing; }
   .asset .badge {
-    width: 36px; height: 36px;
+    width: 38px; height: 38px;
     background: var(--bg-1); border: 1px solid var(--line-bright);
     display: grid; place-items: center;
-    font-size: 10px; font-weight: 700; color: var(--accent);
-    letter-spacing: 0.05em; position: relative;
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.05em;
   }
   .asset .badge.crypto { color: var(--gold); border-color: rgba(247,185,85,0.3); }
-  .asset .meta { display:flex; flex-direction:column; gap: 2px; }
-  .asset .sym { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
+  .asset .meta { display: flex; flex-direction: column; gap: 2px; }
+  .asset .sym { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
   .asset .sym.crypto { color: var(--gold); }
 
-  .price { font-size: 16px; font-weight: 600; color: var(--text); }
+  .price { font-size: 18px; font-weight: 600; color: var(--text); }
   .pct {
-    font-weight: 600; padding: 4px 8px; display: inline-block;
-    min-width: 70px; text-align: right;
-    border: 1px solid transparent; font-size: 12px;
+    font-weight: 600; padding: 5px 12px; display: inline-block;
+    min-width: 90px; text-align: right;
+    border: 1px solid transparent; font-size: 13px;
   }
   .pct.up   { color: var(--accent); border-color: rgba(0,255,174,0.25); background: rgba(0,255,174,0.06); }
   .pct.down { color: var(--warn);   border-color: rgba(255,82,119,0.25); background: rgba(255,82,119,0.06); }
   .pct.flat { color: var(--text-dim); }
-
-  .stacked { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .stacked .sub {
-    font-size: 10px; letter-spacing: 0.1em; color: var(--text-faint);
-    text-transform: uppercase;
-  }
-  .stacked .sub b { color: var(--text-dim); font-weight: 600; }
 
   .del {
     background: transparent; border: 1px solid var(--line-bright);
@@ -383,14 +371,7 @@
           <tr>
             <th>Asset</th>
             <th>Price</th>
-            <th>1D Chg</th>
             <th>1D %</th>
-            <th>1M %</th>
-            <th id="th-anchor">Mar 30</th>
-            <th>YTD / 52W LOW</th>
-            <th>Day Range</th>
-            <th>Open</th>
-            <th>Prev Close</th>
             <th></th>
           </tr>
         </thead>
@@ -421,13 +402,9 @@
 
   let watchlist = {};
   let prices = {};
-  let historical = {};
   let lastPriceMap = {};
   let chatCount = 0;
 
-  // ============ CRYPTO CATALOG (built-in) ============
-  // All use Finnhub's BINANCE:* format which the WS supports.
-  // base = pretty short symbol shown in UI; finnhub = exact subscribe symbol
   const CRYPTOS = [
     { base: 'BTC',  name: 'Bitcoin',         finnhub: 'BINANCE:BTCUSDT' },
     { base: 'ETH',  name: 'Ethereum',        finnhub: 'BINANCE:ETHUSDT' },
@@ -478,11 +455,6 @@
     const n = Number(v);
     return (n>=0?'+':'') + n.toFixed(2) + '%';
   };
-  const fmtChange = v => {
-    if (v == null || isNaN(v)) return '—';
-    const n = Number(v);
-    return (n>=0?'+':'') + n.toFixed(2);
-  };
   const dirClass = v => {
     if (v == null || isNaN(v)) return 'flat';
     if (v > 0.001) return 'up';
@@ -524,17 +496,8 @@
     Object.values(prices).forEach(p => { if (p && p.updatedAt > mostRecent) mostRecent = p.updatedAt; });
     document.getElementById('stat-sync').textContent = mostRecent ? ago(mostRecent) : '—';
 
-    const anyHist = Object.values(historical).find(h => h && h.anchorDate);
-    if (anyHist) {
-      const d = new Date(anyHist.anchorDate);
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      document.getElementById('th-anchor').textContent =
-        `${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
-    }
-
     const html = symbols.map(sym => {
       const p = prices[sym] || {};
-      const h = historical[sym] || {};
       const crypto = isCrypto(sym);
       const display = prettySymbol(sym);
       const hasPrice = p.price != null;
@@ -544,19 +507,6 @@
         flashClass = p.price > prev ? 'flash-up' : 'flash-down';
       }
       lastPriceMap[sym] = p.price;
-
-      const range = (p.low != null && p.high != null && p.low > 0 && p.high > 0)
-        ? `${fmtPrice(p.low)} – ${fmtPrice(p.high)}` : '—';
-
-      const ytdCell = h.available && h.pctYTD != null
-        ? `<div class="stacked">
-             <span class="pct ${dirClass(h.pctYTD)}">${fmtPct(h.pctYTD)}</span>
-             <span class="sub">52W LOW <b>${fmtPrice(h.yrLow)}</b></span>
-           </div>`
-        : `<div class="stacked">
-             <span class="pct flat">—</span>
-             <span class="sub">52W LOW <b>—</b></span>
-           </div>`;
 
       return `
         <tr class="${flashClass}" data-sym="${sym}" draggable="true">
@@ -570,14 +520,7 @@
             </div>
           </td>
           <td><span class="price">${fmtPrice(p.price)}</span></td>
-          <td><span class="pct ${dirClass(p.change)}">${crypto ? '—' : fmtChange(p.change)}</span></td>
-          <td><span class="pct ${dirClass(p.percent)}">${crypto ? '—' : fmtPct(p.percent)}</span></td>
-          <td><span class="pct ${dirClass(h.pct1M)}">${h.available ? fmtPct(h.pct1M) : '—'}</span></td>
-          <td><span class="pct ${dirClass(h.pctAnchor)}">${h.available ? fmtPct(h.pctAnchor) : '—'}</span></td>
-          <td>${ytdCell}</td>
-          <td style="color:var(--text-dim)">${crypto ? '—' : range}</td>
-          <td style="color:var(--text-dim)">${crypto ? '—' : fmtPrice(p.open)}</td>
-          <td style="color:var(--text-dim)">${crypto ? '—' : fmtPrice(p.prevClose)}</td>
+          <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
           <td><button class="del" onclick="deleteTicker('${sym}')"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     }).join('');
@@ -586,7 +529,6 @@
     attachDragHandlers();
   }
 
-  // Drag & drop
   let dragSym = null;
   function attachDragHandlers() {
     const rows = document.querySelectorAll('#watchlist-body tr');
@@ -642,10 +584,8 @@
     db.ref().update(updates);
   }
 
-  // Listeners
   db.ref('watchlist').on('value', snap => { watchlist = snap.val() || {}; renderWatchlist(); });
   db.ref('prices').on('value', snap => { prices = snap.val() || {}; renderWatchlist(); });
-  db.ref('historical').on('value', snap => { historical = snap.val() || {}; renderWatchlist(); });
 
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val(); const key = snap.key;
@@ -675,10 +615,8 @@
     document.getElementById('chat-count').textContent = chatCount + ' MSG';
   });
 
-  // Actions
   function addSymbol(symbol) {
-    if (!symbol) return;
-    if (watchlist[symbol]) return; // already there
+    if (!symbol || watchlist[symbol]) return;
     const existing = sortedSymbols();
     const lastOrder = existing.length
       ? (watchlist[existing[existing.length-1]].order ?? 0)
@@ -691,7 +629,6 @@
   function addCurrentStock() {
     const raw = document.getElementById('search').value.trim();
     if (!raw) return;
-    // Detect crypto by base symbol — auto-promote to BINANCE:XXXUSDT
     const upper = raw.toUpperCase();
     const cryptoMatch = CRYPTOS.find(c => c.base === upper);
     const symbol = cryptoMatch ? cryptoMatch.finnhub : (raw.includes(':') ? raw : upper);
@@ -705,7 +642,6 @@
     if (!confirm(`Remove ${display} from watchlist?`)) return;
     db.ref('watchlist/' + symbol).remove();
     db.ref('prices/' + symbol).remove();
-    db.ref('historical/' + symbol).remove();
   }
 
   function deleteMessage(key) { db.ref('chat/' + key).remove(); }
@@ -723,7 +659,6 @@
     input.value = '';
   }
 
-  // Search — combines built-in crypto list + Finnhub stock search
   let searchTimer = null;
   function handleSearchInput() {
     clearTimeout(searchTimer);
@@ -735,13 +670,11 @@
     if (q.length < 1) { box.classList.add('hidden'); return; }
     const qLower = q.toLowerCase();
 
-    // Crypto matches from built-in catalog
     const cryptoMatches = CRYPTOS.filter(c =>
       c.base.toLowerCase().startsWith(qLower) ||
       c.name.toLowerCase().includes(qLower)
     ).slice(0, 8);
 
-    // Stock matches from Finnhub
     let stockMatches = [];
     try {
       const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${FINNHUB_KEY}`);
@@ -750,8 +683,7 @@
     } catch (e) { /* ignore */ }
 
     if (cryptoMatches.length === 0 && stockMatches.length === 0) {
-      box.classList.add('hidden');
-      return;
+      box.classList.add('hidden'); return;
     }
 
     let html = '';
@@ -780,7 +712,6 @@
     document.getElementById('suggestions').classList.add('hidden');
   }
   function selectCrypto(finnhubSymbol) {
-    // Add directly — crypto search input is just an alias
     addSymbol(finnhubSymbol);
     document.getElementById('search').value = '';
     document.getElementById('suggestions').classList.add('hidden');

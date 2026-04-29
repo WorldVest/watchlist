@@ -103,9 +103,9 @@
     const db = firebase.database();
 
     const PASSWORD = "giddyup";
-    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← PUT YOUR FINNHUB KEY HERE
+    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← CHANGE THIS
 
-    // ... rest of the code (checkPassword, initRealtime, etc.)
+    let currentSuggestions = [];
 
     function checkPassword() {
       const input = document.getElementById('password-input').value.trim();
@@ -121,6 +121,7 @@
     function initRealtime() {
       document.getElementById('username').value = localStorage.getItem('username') || '';
 
+      // Live Prices
       db.ref('prices').on('value', (snapshot) => {
         const prices = snapshot.val() || {};
         const tbody = document.getElementById('watchlist-body');
@@ -129,7 +130,7 @@
         db.ref('watchlist').once('value', (watchSnap) => {
           const watchlist = watchSnap.val() || {};
           Object.keys(watchlist).forEach(symbol => {
-            const p = prices[symbol] ? prices[symbol].price : '—';
+            const p = prices[symbol] ? prices[symbol].price.toFixed(2) : '—';
             const row = document.createElement('tr');
             row.className = 'hover:bg-slate-800/70 transition';
             row.innerHTML = `
@@ -146,11 +147,52 @@
       });
     }
 
-    // Search functions (same as before)
-    async function handleSearchInput() { /* same code as previous version */ }
-    function selectSuggestion(symbol) { /* same */ }
-    function addCurrentStock() { /* same */ }
-    function sendMessage() { /* same */ }
+    // Search Bar
+    async function handleSearchInput() {
+      const query = document.getElementById('search').value.trim();
+      const box = document.getElementById('suggestions');
+      if (query.length < 2) { box.classList.add('hidden'); return; }
+
+      try {
+        const res = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${FINNHUB_KEY}`);
+        const data = await res.json();
+        currentSuggestions = data.result?.slice(0, 10) || [];
+
+        let html = '';
+        currentSuggestions.forEach(item => {
+          html += `<div onclick="selectSuggestion('${item.symbol}')" class="px-6 py-4 hover:bg-slate-800 cursor-pointer border-b border-slate-700">${item.symbol} <span class="text-slate-400">• ${item.description}</span></div>`;
+        });
+        box.innerHTML = html;
+        box.classList.remove('hidden');
+      } catch(e) { console.log("Search error"); }
+    }
+
+    function selectSuggestion(symbol) {
+      document.getElementById('search').value = symbol;
+      document.getElementById('suggestions').classList.add('hidden');
+    }
+
+    function addCurrentStock() {
+      const symbol = document.getElementById('search').value.trim().toUpperCase();
+      if (!symbol) return;
+      db.ref('watchlist/' + symbol).set({ symbol: symbol, addedAt: Date.now() });
+      document.getElementById('search').value = '';
+      document.getElementById('suggestions').classList.add('hidden');
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const nameInput = document.getElementById('username');
+      if (!input.value.trim()) return;
+
+      db.ref('chat').push({
+        name: nameInput.value.trim() || "Anonymous",
+        message: input.value.trim(),
+        timestamp: Date.now()
+      });
+      localStorage.setItem('username', nameInput.value.trim());
+      input.value = '';
+    }
   </script>
 </body>
 </html>

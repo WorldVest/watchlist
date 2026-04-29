@@ -61,7 +61,7 @@
              background: radial-gradient(circle, rgba(74,216,255,0.08), transparent 60%); }
 
   .app { position: relative; z-index: 2; display: grid;
-         grid-template-columns: 40fr 60fr; grid-template-rows: 56px 1fr;
+         grid-template-columns: 33fr 67fr; grid-template-rows: 56px 1fr;
          height: 100vh; }
 
   .topbar {
@@ -137,9 +137,9 @@
     animation: fadeIn 0.4s ease; position: relative; padding-right: 28px;
   }
   .msg .h { display: flex; gap: 12px; align-items: baseline;
-            font-size: 10px; letter-spacing: 0.15em; color: var(--text-faint); margin-bottom: 4px; }
+            font-size: 12px; letter-spacing: 0.12em; color: var(--text-faint); margin-bottom: 5px; }
   .msg .h .who { color: var(--accent); font-weight: 600; }
-  .msg .body { font-size: 13px; color: var(--text); line-height: 1.55; word-break: break-word; }
+  .msg .body { font-size: 15px; color: var(--text); line-height: 1.55; word-break: break-word; }
   .msg .x {
     position: absolute; top: 6px; right: 4px;
     background: transparent; border: none; cursor: pointer;
@@ -573,7 +573,43 @@
   }
 
   db.ref('watchlist').on('value', snap => { watchlist = snap.val() || {}; renderWatchlist(); });
-  db.ref('prices').on('value', snap => { prices = snap.val() || {}; renderWatchlist(); });
+
+  // For price changes, update cells in place instead of rebuilding the whole
+  // table. Full re-renders on every tick can stall under heavy crypto traffic
+  // and are wasteful regardless.
+  db.ref('prices').on('value', snap => {
+    prices = snap.val() || {};
+    if (!updateRowsInPlace()) {
+      // Row count changed (or no tbody yet) — fall back to full render
+      renderWatchlist();
+    } else {
+      // Still update the LAST SYNC indicator
+      let mostRecent = 0;
+      Object.values(prices).forEach(p => { if (p && p.updatedAt > mostRecent) mostRecent = p.updatedAt; });
+      const syncEl = document.getElementById('stat-sync');
+      if (syncEl) syncEl.textContent = mostRecent ? ago(mostRecent) : '—';
+    }
+  });
+
+  function updateRowsInPlace() {
+    const tbody = document.getElementById('watchlist-body');
+    if (!tbody) return false;
+    const rows = tbody.querySelectorAll('tr[data-sym]');
+    const symbols = sortedSymbols();
+    if (rows.length !== symbols.length) return false; // structure changed
+    for (const row of rows) {
+      const sym = row.dataset.sym;
+      const p = prices[sym] || {};
+      const priceEl = row.querySelector('.price');
+      const pctEl = row.querySelector('.pct');
+      if (priceEl) priceEl.textContent = fmtPrice(p.price);
+      if (pctEl) {
+        pctEl.textContent = fmtPct(p.percent);
+        pctEl.className = 'pct ' + dirClass(p.percent);
+      }
+    }
+    return true;
+  }
 
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val(); const key = snap.key;

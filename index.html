@@ -16,7 +16,6 @@
 </head>
 <body class="min-h-screen text-white">
 
-  <!-- MAIN DASHBOARD -->
   <div class="flex h-screen">
     <!-- Chat -->
     <div class="w-[500px] border-r border-slate-700 bg-slate-950 flex flex-col">
@@ -86,9 +85,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← PUT YOUR REAL KEY HERE
+    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← PUT YOUR REAL FINNHUB KEY HERE
 
     function initApp() {
+      console.log("🚀 WorldVest Started");
+
       // Live Watchlist + Prices
       db.ref('watchlist').on('value', renderWatchlist);
       db.ref('prices').on('value', renderWatchlist);
@@ -115,6 +116,7 @@
           Object.keys(watchlist).forEach(symbol => {
             const price = prices[symbol] ? prices[symbol].price.toFixed(2) : '—';
             const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-800/70 transition';
             row.innerHTML = `
               <td class="py-6 pl-4 font-bold text-xl">${symbol}</td>
               <td class="py-6 text-right font-mono text-2xl">${price}</td>
@@ -141,7 +143,6 @@
       if (symbol) {
         db.ref('watchlist/' + symbol).set({ symbol: symbol, addedAt: Date.now() });
         document.getElementById('search').value = '';
-        document.getElementById('suggestions').classList.add('hidden');
       }
     }
 
@@ -181,7 +182,6 @@
       document.getElementById('suggestions').classList.add('hidden');
     }
 
-    // Start the app
     window.onload = initApp;
   </script>
 </body>

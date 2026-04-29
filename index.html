@@ -61,7 +61,7 @@
              background: radial-gradient(circle, rgba(74,216,255,0.08), transparent 60%); }
 
   .app { position: relative; z-index: 2; display: grid;
-         grid-template-columns: 420px 1fr; grid-template-rows: 56px 1fr;
+         grid-template-columns: 40fr 60fr; grid-template-rows: 56px 1fr;
          height: 100vh; }
 
   .topbar {
@@ -89,6 +89,7 @@
   }
   .brand .name { font-weight: 700; font-size: 18px; }
   .brand .name span { color: var(--accent); }
+  .brand-right { margin-left: auto; }
 
   .top-stats {
     display: flex; gap: 28px; margin-left: 8px;
@@ -335,7 +336,7 @@
       <div class="stat"><span>SYMBOLS</span><b id="stat-symbols">0</b></div>
       <div class="stat"><span>LAST SYNC</span><b id="stat-sync">—</b></div>
     </div>
-    <div class="clock">UTC <b id="clock">--:--:--</b></div>
+    <div class="brand brand-right"><div class="name">WATCH<span>LIST</span></div></div>
   </header>
 
   <aside class="chat">
@@ -440,14 +441,6 @@
     return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
   }
 
-  function tick() {
-    const d = new Date();
-    const pad = n => String(n).padStart(2,'0');
-    document.getElementById('clock').textContent =
-      pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
-  }
-  setInterval(tick, 1000); tick();
-
   const fmtPrice = v => v == null || isNaN(v) ? '—'
     : Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits: v < 1 ? 6 : 2});
   const fmtPct = v => {
@@ -501,15 +494,10 @@
       const crypto = isCrypto(sym);
       const display = prettySymbol(sym);
       const hasPrice = p.price != null;
-      const prev = lastPriceMap[sym];
-      let flashClass = '';
-      if (prev != null && hasPrice && prev !== p.price) {
-        flashClass = p.price > prev ? 'flash-up' : 'flash-down';
-      }
       lastPriceMap[sym] = p.price;
 
       return `
-        <tr class="${flashClass}" data-sym="${sym}" draggable="true">
+        <tr data-sym="${sym}" draggable="true">
           <td>
             <div class="asset">
               <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>

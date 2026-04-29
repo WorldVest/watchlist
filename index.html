@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>WORLDVEST // TERMINAL</title>
+<title>WORLDVEST</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -22,16 +21,16 @@
     --line: #1a2238;
     --line-bright: #2a3656;
     --text: #d6e1ff;
-    --text-dim: #6b7a9c;
-    --text-faint: #3d4a6a;
-    --accent: #00ffae;          /* signal green */
+    --text-dim: #8a9bc4;       /* brighter than before */
+    --text-faint: #5d6e94;     /* brighter than before */
+    --header: #b8c8ff;         /* NEW: bright header color */
+    --accent: #00ffae;
     --accent-glow: #00ffae40;
-    --warn: #ff5277;             /* loss red/pink */
+    --warn: #ff5277;
     --warn-glow: #ff527740;
     --amber: #ffb547;
     --cyan: #4ad8ff;
   }
-
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   body {
@@ -42,199 +41,130 @@
     overflow: hidden;
     position: relative;
   }
-
-  /* Animated grid backdrop */
   body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
+    content: ""; position: fixed; inset: 0;
     background:
       linear-gradient(rgba(0,255,174,0.035) 1px, transparent 1px) 0 0 / 100% 44px,
       linear-gradient(90deg, rgba(0,255,174,0.035) 1px, transparent 1px) 0 0 / 44px 100%;
-    pointer-events: none;
-    z-index: 0;
-    animation: drift 30s linear infinite;
+    pointer-events: none; z-index: 0; animation: drift 30s linear infinite;
   }
-  @keyframes drift {
-    from { background-position: 0 0, 0 0; }
-    to   { background-position: 0 44px, 44px 0; }
-  }
-  /* Subtle scanline overlay */
+  @keyframes drift { from { background-position: 0 0, 0 0; } to { background-position: 0 44px, 44px 0; } }
   body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      to bottom,
-      rgba(255,255,255,0.012) 0px,
-      rgba(255,255,255,0.012) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    pointer-events: none;
-    mix-blend-mode: overlay;
-    z-index: 1;
+    content: ""; position: fixed; inset: 0;
+    background: repeating-linear-gradient(to bottom,
+      rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+      transparent 1px, transparent 3px);
+    pointer-events: none; mix-blend-mode: overlay; z-index: 1;
   }
+  .glow { position: fixed; width: 900px; height: 900px; border-radius: 50%;
+          pointer-events: none; z-index: 0; filter: blur(40px); }
+  .glow.tl { top: -300px; left: -300px;
+             background: radial-gradient(circle, rgba(0,255,174,0.10), transparent 60%); }
+  .glow.br { bottom: -400px; right: -300px;
+             background: radial-gradient(circle, rgba(74,216,255,0.08), transparent 60%); }
 
-  /* Radial glow */
-  .glow {
-    position: fixed;
-    width: 900px; height: 900px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0,255,174,0.10), transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-    filter: blur(40px);
-  }
-  .glow.tl { top: -300px; left: -300px; }
-  .glow.br { bottom: -400px; right: -300px; background: radial-gradient(circle, rgba(74,216,255,0.08), transparent 60%); }
+  .app { position: relative; z-index: 2; display: grid;
+         grid-template-columns: 420px 1fr; grid-template-rows: 56px 1fr;
+         height: 100vh; }
 
-  /* Layout */
-  .app {
-    position: relative; z-index: 2;
-    display: grid;
-    grid-template-columns: 420px 1fr;
-    height: 100vh;
-  }
-
-  /* ====== TOP BAR ====== */
+  /* TOP BAR */
   .topbar {
     grid-column: 1 / -1;
-    height: 56px;
     border-bottom: 1px solid var(--line);
     background: rgba(5,7,13,0.85);
     backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 22px;
+    display: flex; align-items: center; padding: 0 20px; gap: 22px;
     position: relative;
   }
   .topbar::after {
-    content:"";
-    position:absolute; left:0; right:0; bottom:-1px; height:1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0.4;
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.4;
   }
-  .brand {
-    display: flex; align-items: center; gap: 12px;
-    font-family: 'Space Grotesk', sans-serif;
-    letter-spacing: 0.18em;
-  }
+  .brand { display: flex; align-items: center; gap: 12px;
+           font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.18em; }
   .brand .orb {
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at 30% 30%, #00ffae 0%, #00b888 35%, #003c5a 70%, #0a0e1a 100%);
+    width: 26px; height: 26px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #00ffae 0%, #00b888 35%, #003c5a 70%, #0a0e1a 100%);
     box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4);
-    position: relative;
     animation: pulseOrb 3s ease-in-out infinite;
   }
   @keyframes pulseOrb {
     0%,100% { box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4); }
     50%     { box-shadow: 0 0 36px var(--accent-glow), inset 0 0 14px rgba(255,255,255,0.5); }
   }
-  .brand .name {
-    font-weight: 700;
-    font-size: 18px;
-  }
+  .brand .name { font-weight: 700; font-size: 18px; }
   .brand .name span { color: var(--accent); }
-  .brand .build {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    color: var(--text-faint);
-    letter-spacing: 0.3em;
-    margin-top: 2px;
-  }
 
   .top-stats {
     display: flex; gap: 28px; margin-left: 8px;
-    border-left: 1px solid var(--line);
-    padding-left: 24px;
+    border-left: 1px solid var(--line); padding-left: 24px;
   }
-  .stat {
-    display: flex; flex-direction: column; gap: 2px;
-    font-size: 10px; letter-spacing: 0.2em; color: var(--text-faint);
-  }
-  .stat b {
-    font-size: 13px; letter-spacing: 0.05em;
-    color: var(--text); font-weight: 600;
-  }
+  .stat { display: flex; flex-direction: column; gap: 2px;
+          font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); }
+  .stat b { font-size: 13px; letter-spacing: 0.05em; color: var(--text); font-weight: 600; }
   .stat .live { color: var(--accent); }
   .stat .live::before {
     content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
     background: var(--accent); margin-right:6px; transform: translateY(-2px);
-    box-shadow: 0 0 8px var(--accent);
-    animation: blink 1.4s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--accent); animation: blink 1.4s ease-in-out infinite;
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
   .clock { margin-left: auto; color: var(--text-dim); font-size: 11px; letter-spacing: 0.2em; }
   .clock b { color: var(--text); font-weight: 600; }
 
-  /* ====== CHAT (left) ====== */
+  /* CHAT */
   .chat {
     border-right: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(10,14,26,0.7) 0%, rgba(5,7,13,0.95) 100%);
-    display: flex; flex-direction: column;
-    min-height: 0;
+    display: flex; flex-direction: column; min-height: 0;
   }
   .panel-head {
-    height: 44px; min-height:44px;
+    height: 44px; min-height: 44px;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 18px;
-    border-bottom: 1px solid var(--line);
+    padding: 0 18px; border-bottom: 1px solid var(--line);
     font-size: 10px; letter-spacing: 0.3em; color: var(--text-dim);
     background: rgba(0,0,0,0.3);
   }
-  .panel-head .tag {
-    color: var(--accent);
-    display: inline-flex; align-items: center; gap: 8px;
-  }
+  .panel-head .tag { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
   .panel-head .tag::before {
-    content:""; width:6px; height:6px; background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
+    content:""; width:6px; height:6px; background: var(--accent); box-shadow: 0 0 8px var(--accent);
   }
-
   .messages {
-    flex: 1; overflow-y: auto;
-    padding: 18px;
+    flex: 1; overflow-y: auto; padding: 18px;
     display: flex; flex-direction: column; gap: 14px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line-bright) transparent;
+    scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent;
   }
   .messages::-webkit-scrollbar { width: 6px; }
   .messages::-webkit-scrollbar-thumb { background: var(--line-bright); border-radius: 3px; }
 
   .msg {
-    border-left: 2px solid var(--line-bright);
-    padding: 8px 0 8px 14px;
-    animation: fadeIn 0.4s ease;
+    border-left: 2px solid var(--line-bright); padding: 8px 0 8px 14px;
+    animation: fadeIn 0.4s ease; position: relative; padding-right: 28px;
   }
-  .msg .h {
-    display: flex; gap: 12px; align-items: baseline;
-    font-size: 10px; letter-spacing: 0.15em; color: var(--text-faint);
-    margin-bottom: 4px;
-  }
+  .msg .h { display: flex; gap: 12px; align-items: baseline;
+            font-size: 10px; letter-spacing: 0.15em; color: var(--text-faint); margin-bottom: 4px; }
   .msg .h .who { color: var(--accent); font-weight: 600; }
   .msg .body { font-size: 13px; color: var(--text); line-height: 1.55; word-break: break-word; }
+  .msg .x {
+    position: absolute; top: 6px; right: 4px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--text-faint); font-size: 12px; padding: 4px 6px;
+    opacity: 0; transition: opacity .15s, color .15s;
+    font-family: inherit;
+  }
+  .msg:hover .x { opacity: 1; }
+  .msg .x:hover { color: var(--warn); }
   @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
 
   .composer {
-    border-top: 1px solid var(--line);
-    padding: 14px;
+    border-top: 1px solid var(--line); padding: 14px;
     background: rgba(0,0,0,0.4);
     display: flex; flex-direction: column; gap: 10px;
   }
   .composer input {
-    width: 100%;
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 12px;
-    padding: 10px 14px;
-    outline: none;
+    width: 100%; background: var(--bg-1); border: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 12px;
+    padding: 10px 14px; outline: none;
     transition: border-color .15s, box-shadow .15s;
   }
   .composer input:focus {
@@ -245,39 +175,23 @@
   .composer .row input { flex: 1; }
   .btn {
     background: linear-gradient(180deg, #00ffae 0%, #00b888 100%);
-    color: #03130d;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    font-size: 11px;
-    padding: 0 18px;
-    border: none;
-    cursor: pointer;
+    color: #03130d; font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; letter-spacing: 0.2em; font-size: 11px;
+    padding: 0 18px; border: none; cursor: pointer;
     transition: transform .1s, box-shadow .15s, filter .15s;
     text-transform: uppercase;
   }
   .btn:hover { box-shadow: 0 0 24px var(--accent-glow); filter: brightness(1.1); }
   .btn:active { transform: translateY(1px); }
-  .btn.ghost {
-    background: transparent;
-    color: var(--accent);
-    border: 1px solid var(--line-bright);
-  }
-  .btn.ghost:hover { border-color: var(--accent); background: rgba(0,255,174,0.06); }
 
-  /* ====== WATCHLIST (right) ====== */
+  /* MAIN */
   .main {
-    display: flex; flex-direction: column;
-    min-height: 0;
-    background:
-      radial-gradient(ellipse at top, rgba(0,255,174,0.04), transparent 60%),
-      var(--bg-0);
+    display: flex; flex-direction: column; min-height: 0;
+    background: radial-gradient(ellipse at top, rgba(0,255,174,0.04), transparent 60%), var(--bg-0);
   }
-
   .toolbar {
     display: flex; align-items: center; gap: 14px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--line);
+    padding: 16px 24px; border-bottom: 1px solid var(--line);
     background: rgba(0,0,0,0.3);
   }
   .search-wrap { flex: 1; position: relative; }
@@ -286,15 +200,9 @@
     color: var(--text-faint); font-size: 12px;
   }
   .search-wrap input {
-    width: 100%;
-    background: var(--bg-1);
-    border: 1px solid var(--line);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 13px;
-    padding: 11px 14px 11px 38px;
-    outline: none;
-    letter-spacing: 0.05em;
+    width: 100%; background: var(--bg-1); border: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 13px;
+    padding: 11px 14px 11px 38px; outline: none; letter-spacing: 0.05em;
   }
   .search-wrap input::placeholder { color: var(--text-faint); letter-spacing: 0.1em; }
   .search-wrap input:focus {
@@ -303,18 +211,14 @@
   }
   #suggestions {
     position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-    background: var(--bg-1);
-    border: 1px solid var(--line-bright);
-    max-height: 320px; overflow-y: auto;
-    z-index: 100;
+    background: var(--bg-1); border: 1px solid var(--line-bright);
+    max-height: 320px; overflow-y: auto; z-index: 100;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
   #suggestions.hidden { display: none; }
   .sug {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--line);
-    cursor: pointer; font-size: 12px;
-    display: flex; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    cursor: pointer; font-size: 12px; display: flex; gap: 12px;
     transition: background .1s;
   }
   .sug:hover { background: rgba(0,255,174,0.08); }
@@ -322,67 +226,59 @@
   .sug .desc { color: var(--text-dim); flex:1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* TABLE */
-  .table-wrap {
-    flex: 1; overflow: auto;
-    padding: 0;
-  }
+  .table-wrap { flex: 1; overflow: auto; padding: 0; }
   table { width: 100%; border-collapse: collapse; }
   thead th {
     position: sticky; top: 0;
-    background: rgba(5,7,13,0.95);
-    backdrop-filter: blur(8px);
+    background: rgba(5,7,13,0.95); backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--line-bright);
-    text-align: right;
-    padding: 14px 16px;
-    font-size: 10px; font-weight: 600;
-    letter-spacing: 0.3em;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    z-index: 5;
+    text-align: right; padding: 14px 12px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--header);                  /* BRIGHTER */
+    text-shadow: 0 0 12px rgba(184,200,255,0.25);
+    text-transform: uppercase; z-index: 5;
+    white-space: nowrap;
   }
   thead th:first-child { text-align: left; padding-left: 24px; }
   thead th:last-child { text-align: right; padding-right: 24px; }
 
   tbody tr {
     border-bottom: 1px solid var(--line);
-    transition: background .15s;
+    transition: background .15s, opacity .15s;
     position: relative;
   }
   tbody tr:hover { background: rgba(0,255,174,0.025); }
+  tbody tr.dragging { opacity: 0.35; }
+  tbody tr.drag-over-top    { box-shadow: inset 0 2px 0 var(--accent); }
+  tbody tr.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
+
   tbody td {
-    padding: 18px 16px;
-    text-align: right;
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
+    padding: 16px 12px; text-align: right;
+    font-size: 13px; font-variant-numeric: tabular-nums;
   }
   tbody td:first-child { padding-left: 24px; text-align: left; }
   tbody td:last-child { padding-right: 24px; }
 
-  .asset {
-    display: flex; align-items: center; gap: 14px;
+  .asset { display: flex; align-items: center; gap: 12px; }
+  .drag-handle {
+    cursor: grab; color: var(--text-faint); font-size: 14px;
+    padding: 4px 6px; user-select: none;
+    transition: color .15s;
   }
+  .drag-handle:hover { color: var(--accent); }
+  .drag-handle:active { cursor: grabbing; }
   .asset .badge {
-    width: 38px; height: 38px;
-    background: var(--bg-1);
-    border: 1px solid var(--line-bright);
+    width: 36px; height: 36px;
+    background: var(--bg-1); border: 1px solid var(--line-bright);
     display: grid; place-items: center;
-    font-size: 11px; font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 0.05em;
-    position: relative;
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.05em; position: relative;
   }
-  .asset .badge::before {
-    content:""; position:absolute; inset:-1px;
-    border: 1px solid var(--accent);
-    opacity: 0; transition: opacity .2s;
-  }
-  tbody tr:hover .asset .badge::before { opacity: 0.4; }
   .asset .meta { display:flex; flex-direction:column; gap: 2px; }
-  .asset .sym { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
-  .asset .live-dot {
-    font-size: 9px; letter-spacing: 0.25em; color: var(--text-faint);
-    display: flex; align-items: center; gap: 6px;
-  }
+  .asset .sym { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
+  .asset .live-dot { font-size: 9px; letter-spacing: 0.25em; color: var(--text-faint);
+                     display: flex; align-items: center; gap: 6px; }
   .asset .live-dot::before {
     content: ""; width: 5px; height: 5px; border-radius: 50%;
     background: var(--accent); box-shadow: 0 0 6px var(--accent);
@@ -391,59 +287,42 @@
   .asset .live-dot.stale::before { background: var(--text-faint); box-shadow:none; animation:none; }
   .asset .live-dot.stale { color: var(--text-faint); }
 
-  .price {
-    font-size: 18px; font-weight: 600;
-    color: var(--text);
-  }
+  .price { font-size: 16px; font-weight: 600; color: var(--text); }
   .pct {
-    font-weight: 600;
-    padding: 4px 10px;
-    display: inline-block;
-    min-width: 78px;
-    text-align: right;
-    border: 1px solid transparent;
+    font-weight: 600; padding: 4px 8px; display: inline-block;
+    min-width: 70px; text-align: right;
+    border: 1px solid transparent; font-size: 12px;
   }
   .pct.up   { color: var(--accent); border-color: rgba(0,255,174,0.25); background: rgba(0,255,174,0.06); }
   .pct.down { color: var(--warn);   border-color: rgba(255,82,119,0.25); background: rgba(255,82,119,0.06); }
   .pct.flat { color: var(--text-dim); }
 
+  /* Stacked cell: % on top, sub-label under (used for YTD + 52w low) */
+  .stacked { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .stacked .sub {
+    font-size: 10px; letter-spacing: 0.1em; color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .stacked .sub b { color: var(--text-dim); font-weight: 600; }
+
   .del {
     background: transparent; border: 1px solid var(--line-bright);
-    color: var(--text-faint);
-    padding: 6px 10px;
-    cursor: pointer;
-    font-family: inherit; font-size: 11px;
-    transition: all .15s;
+    color: var(--text-faint); padding: 6px 10px; cursor: pointer;
+    font-family: inherit; font-size: 11px; transition: all .15s;
   }
   .del:hover { color: var(--warn); border-color: var(--warn); background: rgba(255,82,119,0.08); }
 
-  .empty {
-    padding: 80px 40px;
-    text-align: center;
-    color: var(--text-dim);
-  }
-  .empty h3 {
-    font-family: 'Space Grotesk', sans-serif;
-    color: var(--text);
-    letter-spacing: 0.2em;
-    font-size: 16px;
-    margin: 0 0 8px;
-  }
+  .empty { padding: 80px 40px; text-align: center; color: var(--text-dim); }
+  .empty h3 { font-family: 'Space Grotesk', sans-serif; color: var(--text);
+              letter-spacing: 0.2em; font-size: 16px; margin: 0 0 8px; }
   .empty p { font-size: 12px; color: var(--text-faint); letter-spacing: 0.05em; }
+  .empty.hidden { display: none; }
 
-  /* Flash animation when price updates */
-  @keyframes flashUp {
-    0%   { background: rgba(0,255,174,0.18); }
-    100% { background: transparent; }
-  }
-  @keyframes flashDown {
-    0%   { background: rgba(255,82,119,0.18); }
-    100% { background: transparent; }
-  }
+  @keyframes flashUp { 0% { background: rgba(0,255,174,0.18); } 100% { background: transparent; } }
+  @keyframes flashDown { 0% { background: rgba(255,82,119,0.18); } 100% { background: transparent; } }
   .flash-up   { animation: flashUp 0.8s ease; }
   .flash-down { animation: flashDown 0.8s ease; }
 
-  /* mobile */
   @media (max-width: 880px) {
     .app { grid-template-columns: 1fr; grid-template-rows: 56px 50vh 1fr; }
     .chat { border-right: none; border-bottom: 1px solid var(--line); }
@@ -458,13 +337,10 @@
 
 <div class="app">
 
-  <!-- TOP BAR -->
   <header class="topbar">
     <div class="brand">
       <div class="orb"></div>
-      <div>
-        <div class="name">WORLD<span>VEST</span></div>
-      </div>
+      <div><div class="name">WORLD<span>VEST</span></div></div>
     </div>
 
     <div class="top-stats">
@@ -472,11 +348,9 @@
       <div class="stat"><span>SYMBOLS</span><b id="stat-symbols">0</b></div>
       <div class="stat"><span>LAST SYNC</span><b id="stat-sync">—</b></div>
     </div>
-
     <div class="clock">UTC <b id="clock">--:--:--</b></div>
   </header>
 
-  <!-- CHAT -->
   <aside class="chat">
     <div class="panel-head">
       <span class="tag">CHAT BOARD</span>
@@ -493,7 +367,6 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main">
     <div class="toolbar">
       <div class="search-wrap">
@@ -511,8 +384,11 @@
           <tr>
             <th>Asset</th>
             <th>Price</th>
-            <th>Change</th>
-            <th>% Change</th>
+            <th>1D Chg</th>
+            <th>1D %</th>
+            <th>1M %</th>
+            <th id="th-anchor">Mar 30</th>
+            <th>YTD / 52W LOW</th>
             <th>Day Range</th>
             <th>Open</th>
             <th>Prev Close</th>
@@ -545,10 +421,10 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // ============ STATE ============
-  let watchlist = {};   // {SYMBOL: {symbol, addedAt}}
-  let prices = {};      // {SYMBOL: {price, change, percent, ...}}
-  let lastPriceMap = {};// remember previous for flash effect
+  let watchlist = {};   // {SYMBOL: {symbol, addedAt, order}}
+  let prices = {};
+  let historical = {};  // {SYMBOL: {pct1M, pctAnchor, pctYTD, yrLow, anchorDate, available}}
+  let lastPriceMap = {};
   let chatCount = 0;
 
   // ============ CLOCK ============
@@ -561,10 +437,8 @@
   setInterval(tick, 1000); tick();
 
   // ============ FORMATTING ============
-  const fmtPrice = v => {
-    if (v == null || isNaN(v)) return '—';
-    return Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-  };
+  const fmtPrice = v => v == null || isNaN(v) ? '—'
+    : Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
   const fmtPct = v => {
     if (v == null || isNaN(v)) return '—';
     const n = Number(v);
@@ -575,6 +449,12 @@
     const n = Number(v);
     return (n>=0?'+':'') + n.toFixed(2);
   };
+  const dirClass = v => {
+    if (v == null || isNaN(v)) return 'flat';
+    if (v > 0.001) return 'up';
+    if (v < -0.001) return 'down';
+    return 'flat';
+  };
   const ago = ts => {
     if (!ts) return '—';
     const s = Math.floor((Date.now() - ts) / 1000);
@@ -582,12 +462,22 @@
     if (s < 3600) return Math.floor(s/60) + 'm ago';
     return Math.floor(s/3600) + 'h ago';
   };
+  const safe = s => String(s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+  // Sort watchlist symbols by order field, fallback to addedAt
+  function sortedSymbols() {
+    return Object.keys(watchlist).sort((a,b) => {
+      const oa = watchlist[a].order ?? watchlist[a].addedAt ?? 0;
+      const ob = watchlist[b].order ?? watchlist[b].addedAt ?? 0;
+      return oa - ob;
+    });
+  }
 
   // ============ RENDER WATCHLIST ============
   function renderWatchlist() {
     const tbody = document.getElementById('watchlist-body');
     const empty = document.getElementById('empty-state');
-    const symbols = Object.keys(watchlist);
+    const symbols = sortedSymbols();
 
     document.getElementById('stat-symbols').textContent = symbols.length;
 
@@ -598,16 +488,23 @@
     }
     empty.classList.add('hidden');
 
-    // Most recent updatedAt across all prices for "Last Sync"
     let mostRecent = 0;
     Object.values(prices).forEach(p => { if (p && p.updatedAt > mostRecent) mostRecent = p.updatedAt; });
     document.getElementById('stat-sync').textContent = mostRecent ? ago(mostRecent) : '—';
 
-    // Re-render preserving flash animations
-    const html = symbols.sort().map(sym => {
+    // Update anchor header label dynamically from historical data if available
+    const anyHist = Object.values(historical).find(h => h && h.anchorDate);
+    if (anyHist) {
+      const d = new Date(anyHist.anchorDate);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      document.getElementById('th-anchor').textContent =
+        `${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
+    }
+
+    const html = symbols.map(sym => {
       const p = prices[sym] || {};
+      const h = historical[sym] || {};
       const hasPrice = p.price != null;
-      const dir = (p.percent || 0) > 0.001 ? 'up' : (p.percent || 0) < -0.001 ? 'down' : 'flat';
       const prev = lastPriceMap[sym];
       let flashClass = '';
       if (prev != null && hasPrice && prev !== p.price) {
@@ -620,10 +517,21 @@
       const live = hasPrice ? '<span class="live-dot">STREAMING</span>'
                             : '<span class="live-dot stale">PENDING</span>';
 
+      const ytdCell = h.available && h.pctYTD != null
+        ? `<div class="stacked">
+             <span class="pct ${dirClass(h.pctYTD)}">${fmtPct(h.pctYTD)}</span>
+             <span class="sub">52W LOW <b>${fmtPrice(h.yrLow)}</b></span>
+           </div>`
+        : `<div class="stacked">
+             <span class="pct flat">—</span>
+             <span class="sub">52W LOW <b>—</b></span>
+           </div>`;
+
       return `
-        <tr class="${flashClass}" data-sym="${sym}">
+        <tr class="${flashClass}" data-sym="${sym}" draggable="true">
           <td>
             <div class="asset">
+              <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
               <div class="badge">${sym.slice(0,4)}</div>
               <div class="meta">
                 <div class="sym">${sym}</div>
@@ -632,8 +540,11 @@
             </div>
           </td>
           <td><span class="price">${fmtPrice(p.price)}</span></td>
-          <td><span class="pct ${dir}">${fmtChange(p.change)}</span></td>
-          <td><span class="pct ${dir}">${fmtPct(p.percent)}</span></td>
+          <td><span class="pct ${dirClass(p.change)}">${fmtChange(p.change)}</span></td>
+          <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
+          <td><span class="pct ${dirClass(h.pct1M)}">${h.available ? fmtPct(h.pct1M) : '—'}</span></td>
+          <td><span class="pct ${dirClass(h.pctAnchor)}">${h.available ? fmtPct(h.pctAnchor) : '—'}</span></td>
+          <td>${ytdCell}</td>
           <td style="color:var(--text-dim)">${range}</td>
           <td style="color:var(--text-dim)">${fmtPrice(p.open)}</td>
           <td style="color:var(--text-dim)">${fmtPrice(p.prevClose)}</td>
@@ -642,6 +553,66 @@
     }).join('');
 
     tbody.innerHTML = html;
+    attachDragHandlers();
+  }
+
+  // ============ DRAG & DROP REORDERING ============
+  let dragSym = null;
+  function attachDragHandlers() {
+    const rows = document.querySelectorAll('#watchlist-body tr');
+    rows.forEach(row => {
+      row.addEventListener('dragstart', e => {
+        dragSym = row.dataset.sym;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Some browsers need data set to enable drop
+        try { e.dataTransfer.setData('text/plain', dragSym); } catch (_) {}
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        document.querySelectorAll('#watchlist-body tr').forEach(r => {
+          r.classList.remove('drag-over-top','drag-over-bottom');
+        });
+        dragSym = null;
+      });
+      row.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (!dragSym || row.dataset.sym === dragSym) return;
+        const rect = row.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        row.classList.toggle('drag-over-top', before);
+        row.classList.toggle('drag-over-bottom', !before);
+      });
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('drag-over-top','drag-over-bottom');
+      });
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        if (!dragSym || row.dataset.sym === dragSym) return;
+        const targetSym = row.dataset.sym;
+        const rect = row.getBoundingClientRect();
+        const before = (e.clientY - rect.top) < rect.height / 2;
+        reorderSymbols(dragSym, targetSym, before);
+      });
+    });
+  }
+
+  function reorderSymbols(movedSym, targetSym, dropBefore) {
+    const order = sortedSymbols();
+    const fromIdx = order.indexOf(movedSym);
+    if (fromIdx === -1) return;
+    order.splice(fromIdx, 1);
+    let toIdx = order.indexOf(targetSym);
+    if (toIdx === -1) return;
+    if (!dropBefore) toIdx += 1;
+    order.splice(toIdx, 0, movedSym);
+
+    // Re-number with spaced order values so future inserts are easy
+    const updates = {};
+    order.forEach((sym, i) => {
+      updates[`watchlist/${sym}/order`] = (i + 1) * 1000;
+    });
+    db.ref().update(updates);
   }
 
   // ============ FIREBASE LISTENERS ============
@@ -653,15 +624,23 @@
     prices = snap.val() || {};
     renderWatchlist();
   });
+  db.ref('historical').on('value', snap => {
+    historical = snap.val() || {};
+    renderWatchlist();
+  });
 
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val();
+    const key = snap.key;
     if (!m) return;
     const time = new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    const safe = s => String(s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
     const div = document.createElement('div');
     div.className = 'msg';
+    div.dataset.key = key;
     div.innerHTML = `
+      <button class="x" title="Delete message" onclick="deleteMessage('${key}')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
       <div class="h">
         <span class="who">${safe(m.name) || 'ANON'}</span>
         <span>${time}</span>
@@ -674,11 +653,25 @@
     document.getElementById('chat-count').textContent = chatCount + ' MSG';
   });
 
+  db.ref('chat').on('child_removed', snap => {
+    const node = document.querySelector(`.msg[data-key="${snap.key}"]`);
+    if (node) node.remove();
+    chatCount = Math.max(0, chatCount - 1);
+    document.getElementById('chat-count').textContent = chatCount + ' MSG';
+  });
+
   // ============ ACTIONS ============
   function addCurrentStock() {
     const symbol = document.getElementById('search').value.trim().toUpperCase();
     if (!symbol) return;
-    db.ref('watchlist/' + symbol).set({ symbol, addedAt: Date.now() });
+    // Put new symbol at the end
+    const existing = sortedSymbols();
+    const lastOrder = existing.length
+      ? (watchlist[existing[existing.length-1]].order ?? 0)
+      : 0;
+    db.ref('watchlist/' + symbol).set({
+      symbol, addedAt: Date.now(), order: lastOrder + 1000
+    });
     document.getElementById('search').value = '';
     document.getElementById('suggestions').classList.add('hidden');
   }
@@ -687,6 +680,11 @@
     if (!confirm(`Remove ${symbol} from watchlist?`)) return;
     db.ref('watchlist/' + symbol).remove();
     db.ref('prices/' + symbol).remove();
+    db.ref('historical/' + symbol).remove();
+  }
+
+  function deleteMessage(key) {
+    db.ref('chat/' + key).remove();
   }
 
   function sendMessage() {
@@ -702,7 +700,7 @@
     input.value = '';
   }
 
-  // ============ SEARCH SUGGESTIONS ============
+  // ============ SEARCH ============
   let searchTimer = null;
   function handleSearchInput() {
     clearTimeout(searchTimer);
@@ -731,8 +729,6 @@
     document.getElementById('search').value = symbol;
     document.getElementById('suggestions').classList.add('hidden');
   }
-
-  // close suggestions on outside click
   document.addEventListener('click', e => {
     if (!e.target.closest('.search-wrap')) {
       document.getElementById('suggestions').classList.add('hidden');

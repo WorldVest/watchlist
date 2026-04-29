@@ -27,7 +27,10 @@
         <input id="password-input" type="password" placeholder="Password" 
                class="w-full bg-slate-950 border border-slate-700 rounded-3xl px-10 py-6 text-xl text-center"
                onkeypress="if(event.key === 'Enter') checkPassword()">
-        <button onclick="checkPassword()" class="mt-8 w-full bg-gradient-to-r from-emerald-500 to-cyan-500 py-6 rounded-3xl text-2xl font-medium">ENTER</button>
+        <button onclick="checkPassword()" 
+                class="mt-8 w-full bg-gradient-to-r from-emerald-500 to-cyan-500 py-6 rounded-3xl text-2xl font-medium">
+          ENTER
+        </button>
         <p id="error-msg" class="text-red-400 mt-6 hidden">Incorrect password</p>
       </div>
     </div>
@@ -67,7 +70,7 @@
                  onkeyup="handleSearchInput()">
           <div id="suggestions" class="absolute mt-2 w-full bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl max-h-80 overflow-auto hidden z-50"></div>
         </div>
-        <button onclick="addCurrentStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium">ADD TO LIST</button>
+        <button onclick="addCurrentStock()" class="bg-emerald-500 px-8 py-3 rounded-3xl font-medium whitespace-nowrap">ADD TO LIST</button>
       </div>
 
       <div class="flex-1 overflow-auto p-8">
@@ -90,12 +93,21 @@
   </div>
 
   <script>
-    const firebaseConfig = { /* your config */ };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
+      authDomain: "watchlist-d9ade.firebaseapp.com",
+      projectId: "watchlist-d9ade",
+      storageBucket: "watchlist-d9ade.firebasestorage.app",
+      messagingSenderId: "927853955548",
+      appId: "1:927853955548:web:dedd485e291d3804542719",
+      measurementId: "G-9QNQ8ZVLSR"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const PASSWORD = "giddyup";
-    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ← Your key here
+    const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";   // ←←← PUT YOUR REAL FINNHUB KEY HERE
 
     function checkPassword() {
       if (document.getElementById('password-input').value.trim().toLowerCase() === PASSWORD) {
@@ -110,9 +122,9 @@
     function initRealtime() {
       document.getElementById('username').value = localStorage.getItem('username') || '';
 
-      // Live Prices + Watchlist
-      db.ref('prices').on('value', () => renderWatchlist());
+      // Watchlist + Prices
       db.ref('watchlist').on('value', () => renderWatchlist());
+      db.ref('prices').on('value', () => renderWatchlist());
 
       // Chat
       db.ref('chat').limitToLast(100).on('child_added', (snapshot) => {
@@ -163,7 +175,7 @@
     }
 
     function deleteTicker(symbol) {
-      if (confirm(`Remove ${symbol} from watchlist?`)) {
+      if (confirm(`Remove ${symbol} from the watchlist?`)) {
         db.ref('watchlist/' + symbol).remove();
       }
     }

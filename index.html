@@ -105,8 +105,6 @@
     box-shadow: 0 0 8px var(--accent); animation: blink 1.4s ease-in-out infinite;
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .clock { margin-left: auto; color: var(--text-dim); font-size: 11px; letter-spacing: 0.2em; }
-  .clock b { color: var(--text); font-weight: 600; }
 
   /* CHAT */
   .chat {
@@ -206,7 +204,7 @@
   #suggestions {
     position: absolute; top: calc(100% + 6px); left: 0; right: 0;
     background: var(--bg-1); border: 1px solid var(--line-bright);
-    max-height: 380px; overflow-y: auto; z-index: 100;
+    max-height: 420px; overflow-y: auto; z-index: 100;
     box-shadow: 0 20px 60px rgba(0,0,0,0.6);
   }
   #suggestions.hidden { display: none; }
@@ -221,7 +219,11 @@
     transition: background .1s;
   }
   .sug:hover { background: rgba(0,255,174,0.08); }
-  .sug .sym { color: var(--accent); font-weight: 700; min-width: 130px; }
+  .sug img.logo {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bg-0); object-fit: cover;
+  }
+  .sug .sym { color: var(--accent); font-weight: 700; min-width: 90px; }
   .sug.crypto .sym { color: var(--gold); }
   .sug .desc { color: var(--text-dim); flex:1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sug .pill {
@@ -272,17 +274,25 @@
   }
   .drag-handle:hover { color: var(--accent); }
   .drag-handle:active { cursor: grabbing; }
-  .asset .badge {
-    width: 38px; height: 38px;
+  .asset .logo {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--bg-1); border: 1px solid var(--line-bright);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .asset .logo-fallback {
+    width: 36px; height: 36px;
     background: var(--bg-1); border: 1px solid var(--line-bright);
     display: grid; place-items: center;
-    font-size: 11px; font-weight: 700; color: var(--accent);
+    font-size: 10px; font-weight: 700; color: var(--accent);
     letter-spacing: 0.05em;
+    flex-shrink: 0;
   }
-  .asset .badge.crypto { color: var(--gold); border-color: rgba(247,185,85,0.3); }
+  .asset .logo-fallback.crypto { color: var(--gold); border-color: rgba(247,185,85,0.3); }
   .asset .meta { display: flex; flex-direction: column; gap: 2px; }
   .asset .sym { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
   .asset .sym.crypto { color: var(--gold); }
+  .asset .name { font-size: 11px; color: var(--text-faint); letter-spacing: 0.05em; }
 
   .price { font-size: 18px; font-weight: 600; color: var(--text); }
   .pct {
@@ -306,11 +316,6 @@
               letter-spacing: 0.2em; font-size: 16px; margin: 0 0 8px; }
   .empty p { font-size: 12px; color: var(--text-faint); letter-spacing: 0.05em; }
   .empty.hidden { display: none; }
-
-  @keyframes flashUp { 0% { background: rgba(0,255,174,0.18); } 100% { background: transparent; } }
-  @keyframes flashDown { 0% { background: rgba(255,82,119,0.18); } 100% { background: transparent; } }
-  .flash-up   { animation: flashUp 0.8s ease; }
-  .flash-down { animation: flashDown 0.8s ease; }
 
   @media (max-width: 880px) {
     .app { grid-template-columns: 1fr; grid-template-rows: 56px 50vh 1fr; }
@@ -359,11 +364,10 @@
     <div class="toolbar">
       <div class="search-wrap">
         <i class="fa-solid fa-magnifying-glass icon"></i>
-        <input id="search" placeholder="search ticker · stocks (AAPL) · crypto (BTC, ETH, SOL)"
+        <input id="search" placeholder="search · stocks (AAPL) · crypto (HYPE, ZEC, BTC)"
                onkeyup="handleSearchInput()" onfocus="handleSearchInput()" autocomplete="off" />
         <div id="suggestions" class="hidden"></div>
       </div>
-      <button class="btn" onclick="addCurrentStock()">+ ADD</button>
     </div>
 
     <div class="table-wrap">
@@ -380,13 +384,14 @@
       </table>
       <div id="empty-state" class="empty hidden">
         <h3>NO ASSETS TRACKED</h3>
-        <p>Search a ticker above and press ADD to start streaming.</p>
+        <p>Search a ticker above and pick one to start tracking.</p>
       </div>
     </div>
   </main>
 </div>
 
 <script>
+  // ============ CONFIG ============
   const firebaseConfig = {
     apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
     authDomain: "watchlist-d9ade.firebaseapp.com",
@@ -401,48 +406,31 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let watchlist = {};
-  let prices = {};
-  let lastPriceMap = {};
+  let watchlist = {};   // {SYMBOL: {symbol, name, logoUrl, kind, addedAt, order}}
+  let prices = {};      // {SYMBOL: {price, percent, updatedAt}}
   let chatCount = 0;
 
-  const CRYPTOS = [
-    { base: 'BTC',  name: 'Bitcoin',         finnhub: 'BINANCE:BTCUSDT' },
-    { base: 'ETH',  name: 'Ethereum',        finnhub: 'BINANCE:ETHUSDT' },
-    { base: 'SOL',  name: 'Solana',          finnhub: 'BINANCE:SOLUSDT' },
-    { base: 'XRP',  name: 'XRP',             finnhub: 'BINANCE:XRPUSDT' },
-    { base: 'BNB',  name: 'BNB',             finnhub: 'BINANCE:BNBUSDT' },
-    { base: 'ADA',  name: 'Cardano',         finnhub: 'BINANCE:ADAUSDT' },
-    { base: 'DOGE', name: 'Dogecoin',        finnhub: 'BINANCE:DOGEUSDT' },
-    { base: 'AVAX', name: 'Avalanche',       finnhub: 'BINANCE:AVAXUSDT' },
-    { base: 'LINK', name: 'Chainlink',       finnhub: 'BINANCE:LINKUSDT' },
-    { base: 'DOT',  name: 'Polkadot',        finnhub: 'BINANCE:DOTUSDT' },
-    { base: 'MATIC',name: 'Polygon',         finnhub: 'BINANCE:MATICUSDT' },
-    { base: 'LTC',  name: 'Litecoin',        finnhub: 'BINANCE:LTCUSDT' },
-    { base: 'TRX',  name: 'TRON',            finnhub: 'BINANCE:TRXUSDT' },
-    { base: 'BCH',  name: 'Bitcoin Cash',    finnhub: 'BINANCE:BCHUSDT' },
-    { base: 'ATOM', name: 'Cosmos',          finnhub: 'BINANCE:ATOMUSDT' },
-    { base: 'NEAR', name: 'NEAR Protocol',   finnhub: 'BINANCE:NEARUSDT' },
-    { base: 'UNI',  name: 'Uniswap',         finnhub: 'BINANCE:UNIUSDT' },
-    { base: 'XLM',  name: 'Stellar',         finnhub: 'BINANCE:XLMUSDT' },
-    { base: 'APT',  name: 'Aptos',           finnhub: 'BINANCE:APTUSDT' },
-    { base: 'ARB',  name: 'Arbitrum',        finnhub: 'BINANCE:ARBUSDT' },
-    { base: 'OP',   name: 'Optimism',        finnhub: 'BINANCE:OPUSDT' },
-    { base: 'INJ',  name: 'Injective',       finnhub: 'BINANCE:INJUSDT' },
-    { base: 'FIL',  name: 'Filecoin',        finnhub: 'BINANCE:FILUSDT' },
-    { base: 'SUI',  name: 'Sui',             finnhub: 'BINANCE:SUIUSDT' },
-    { base: 'ETC',  name: 'Ethereum Classic',finnhub: 'BINANCE:ETCUSDT' },
-  ];
-
-  function isCrypto(symbol) { return symbol.includes(':'); }
-  function prettySymbol(symbol) {
-    if (!isCrypto(symbol)) return symbol;
-    const pair = symbol.split(':')[1] || '';
-    return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
+  // ============ HELPERS ============
+  function isCrypto(symbol) {
+    return symbol.startsWith('CG:') || symbol.includes(':');
+  }
+  function prettySymbol(symbol, fallbackName) {
+    // Prefer the stored name from watchlist (e.g. "HYPE", "AAPL")
+    if (fallbackName) return fallbackName;
+    if (symbol.startsWith('CG:')) return symbol.slice(3).toUpperCase();
+    if (symbol.includes(':')) {
+      const pair = symbol.split(':')[1] || '';
+      return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
+    }
+    return symbol;
   }
 
-  const fmtPrice = v => v == null || isNaN(v) ? '—'
-    : Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits: v < 1 ? 6 : 2});
+  const fmtPrice = v => {
+    if (v == null || isNaN(v)) return '—';
+    const n = Number(v);
+    const decimals = n < 1 ? 6 : n < 100 ? 2 : 2;
+    return n.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+  };
   const fmtPct = v => {
     if (v == null || isNaN(v)) return '—';
     const n = Number(v);
@@ -461,7 +449,9 @@
     if (s < 3600) return Math.floor(s/60) + 'm ago';
     return Math.floor(s/3600) + 'h ago';
   };
-  const safe = s => String(s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const safe = s => String(s||'').replace(/[<>&"']/g, c => ({
+    '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'
+  }[c]));
 
   function sortedSymbols() {
     return Object.keys(watchlist).sort((a,b) => {
@@ -471,6 +461,7 @@
     });
   }
 
+  // ============ RENDER ============
   function renderWatchlist() {
     const tbody = document.getElementById('watchlist-body');
     const empty = document.getElementById('empty-state');
@@ -490,26 +481,30 @@
     document.getElementById('stat-sync').textContent = mostRecent ? ago(mostRecent) : '—';
 
     const html = symbols.map(sym => {
+      const w = watchlist[sym] || {};
       const p = prices[sym] || {};
       const crypto = isCrypto(sym);
-      const display = prettySymbol(sym);
-      const hasPrice = p.price != null;
-      lastPriceMap[sym] = p.price;
+      const display = prettySymbol(sym, w.tickerLabel);
+
+      const logo = w.logoUrl
+        ? `<img class="logo" src="${safe(w.logoUrl)}" onerror="this.outerHTML='<div class=\\'logo-fallback ${crypto?'crypto':''}\\'>${safe(display).slice(0,4)}</div>'" />`
+        : `<div class="logo-fallback ${crypto ? 'crypto' : ''}">${safe(display).slice(0,4)}</div>`;
 
       return `
-        <tr data-sym="${sym}" draggable="true">
+        <tr data-sym="${safe(sym)}" draggable="true">
           <td>
             <div class="asset">
               <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
-              <div class="badge ${crypto ? 'crypto' : ''}">${display.slice(0,4)}</div>
+              ${logo}
               <div class="meta">
-                <div class="sym ${crypto ? 'crypto' : ''}">${display}</div>
+                <div class="sym ${crypto ? 'crypto' : ''}">${safe(display)}</div>
+                ${w.name ? `<div class="name">${safe(w.name)}</div>` : ''}
               </div>
             </div>
           </td>
           <td><span class="price">${fmtPrice(p.price)}</span></td>
           <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
-          <td><button class="del" onclick="deleteTicker('${sym}')"><i class="fa-solid fa-trash"></i></button></td>
+          <td><button class="del" onclick="deleteTicker('${safe(sym)}')"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     }).join('');
 
@@ -517,6 +512,31 @@
     attachDragHandlers();
   }
 
+  // In-place price update (avoids full re-render on every poll)
+  function updatePricesInPlace() {
+    const tbody = document.getElementById('watchlist-body');
+    if (!tbody) return false;
+    const rows = tbody.querySelectorAll('tr[data-sym]');
+    if (rows.length !== Object.keys(watchlist).length) return false;
+    for (const row of rows) {
+      const sym = row.dataset.sym;
+      const p = prices[sym] || {};
+      const priceEl = row.querySelector('.price');
+      const pctEl = row.querySelector('.pct');
+      if (priceEl) priceEl.textContent = fmtPrice(p.price);
+      if (pctEl) {
+        pctEl.textContent = fmtPct(p.percent);
+        pctEl.className = 'pct ' + dirClass(p.percent);
+      }
+    }
+    let mostRecent = 0;
+    Object.values(prices).forEach(p => { if (p && p.updatedAt > mostRecent) mostRecent = p.updatedAt; });
+    const syncEl = document.getElementById('stat-sync');
+    if (syncEl) syncEl.textContent = mostRecent ? ago(mostRecent) : '—';
+    return true;
+  }
+
+  // ============ DRAG & DROP ============
   let dragSym = null;
   function attachDragHandlers() {
     const rows = document.querySelectorAll('#watchlist-body tr');
@@ -555,7 +575,6 @@
       });
     });
   }
-
   function reorderSymbols(movedSym, targetSym, dropBefore) {
     const order = sortedSymbols();
     const fromIdx = order.indexOf(movedSym);
@@ -572,44 +591,15 @@
     db.ref().update(updates);
   }
 
-  db.ref('watchlist').on('value', snap => { watchlist = snap.val() || {}; renderWatchlist(); });
-
-  // For price changes, update cells in place instead of rebuilding the whole
-  // table. Full re-renders on every tick can stall under heavy crypto traffic
-  // and are wasteful regardless.
+  // ============ FIREBASE LISTENERS ============
+  db.ref('watchlist').on('value', snap => {
+    watchlist = snap.val() || {};
+    renderWatchlist();
+  });
   db.ref('prices').on('value', snap => {
     prices = snap.val() || {};
-    if (!updateRowsInPlace()) {
-      // Row count changed (or no tbody yet) — fall back to full render
-      renderWatchlist();
-    } else {
-      // Still update the LAST SYNC indicator
-      let mostRecent = 0;
-      Object.values(prices).forEach(p => { if (p && p.updatedAt > mostRecent) mostRecent = p.updatedAt; });
-      const syncEl = document.getElementById('stat-sync');
-      if (syncEl) syncEl.textContent = mostRecent ? ago(mostRecent) : '—';
-    }
+    if (!updatePricesInPlace()) renderWatchlist();
   });
-
-  function updateRowsInPlace() {
-    const tbody = document.getElementById('watchlist-body');
-    if (!tbody) return false;
-    const rows = tbody.querySelectorAll('tr[data-sym]');
-    const symbols = sortedSymbols();
-    if (rows.length !== symbols.length) return false; // structure changed
-    for (const row of rows) {
-      const sym = row.dataset.sym;
-      const p = prices[sym] || {};
-      const priceEl = row.querySelector('.price');
-      const pctEl = row.querySelector('.pct');
-      if (priceEl) priceEl.textContent = fmtPrice(p.price);
-      if (pctEl) {
-        pctEl.textContent = fmtPct(p.percent);
-        pctEl.className = 'pct ' + dirClass(p.percent);
-      }
-    }
-    return true;
-  }
 
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val(); const key = snap.key;
@@ -631,7 +621,6 @@
     chatCount++;
     document.getElementById('chat-count').textContent = chatCount + ' MSG';
   });
-
   db.ref('chat').on('child_removed', snap => {
     const node = document.querySelector(`.msg[data-key="${snap.key}"]`);
     if (node) node.remove();
@@ -639,30 +628,26 @@
     document.getElementById('chat-count').textContent = chatCount + ' MSG';
   });
 
-  function addSymbol(symbol) {
+  // ============ ACTIONS ============
+  function addToWatchlist(symbol, meta) {
     if (!symbol || watchlist[symbol]) return;
     const existing = sortedSymbols();
     const lastOrder = existing.length
-      ? (watchlist[existing[existing.length-1]].order ?? 0)
-      : 0;
+      ? (watchlist[existing[existing.length-1]].order ?? 0) : 0;
     db.ref('watchlist/' + symbol).set({
-      symbol, addedAt: Date.now(), order: lastOrder + 1000
+      symbol,
+      tickerLabel: meta.tickerLabel || symbol,
+      name: meta.name || '',
+      logoUrl: meta.logoUrl || '',
+      addedAt: Date.now(),
+      order: lastOrder + 1000,
     });
-  }
-
-  function addCurrentStock() {
-    const raw = document.getElementById('search').value.trim();
-    if (!raw) return;
-    const upper = raw.toUpperCase();
-    const cryptoMatch = CRYPTOS.find(c => c.base === upper);
-    const symbol = cryptoMatch ? cryptoMatch.finnhub : (raw.includes(':') ? raw : upper);
-    addSymbol(symbol);
     document.getElementById('search').value = '';
     document.getElementById('suggestions').classList.add('hidden');
   }
 
   function deleteTicker(symbol) {
-    const display = prettySymbol(symbol);
+    const display = prettySymbol(symbol, watchlist[symbol]?.tickerLabel);
     if (!confirm(`Remove ${display} from watchlist?`)) return;
     db.ref('watchlist/' + symbol).remove();
     db.ref('prices/' + symbol).remove();
@@ -683,63 +668,96 @@
     input.value = '';
   }
 
+  // ============ SEARCH ============
   let searchTimer = null;
   function handleSearchInput() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(doSearch, 200);
+    searchTimer = setTimeout(doSearch, 250);
   }
+
+  async function searchStocks(q) {
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${FINNHUB_KEY}`);
+      const data = await res.json();
+      // Finnhub returns lots of foreign exchanges — filter to common stock types
+      return (data.result || [])
+        .filter(it => it.type && (it.type.includes('Common') || it.type === 'ETP' || it.type === 'Equity'))
+        .slice(0, 8)
+        .map(it => ({
+          symbol: it.symbol,
+          tickerLabel: it.symbol,
+          name: it.description || '',
+          // Free stock logo CDN by ticker (no API key required)
+          logoUrl: `https://logos.allinvestview.com/ticker/${encodeURIComponent(it.symbol)}.png`,
+        }));
+    } catch (e) { return []; }
+  }
+
+  async function searchCrypto(q) {
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      return (data.coins || []).slice(0, 8).map(c => ({
+        symbol: 'CG:' + c.id,
+        tickerLabel: (c.symbol || '').toUpperCase(),
+        name: c.name,
+        logoUrl: c.thumb || c.large || '',
+      }));
+    } catch (e) { return []; }
+  }
+
   async function doSearch() {
     const q = document.getElementById('search').value.trim();
     const box = document.getElementById('suggestions');
     if (q.length < 1) { box.classList.add('hidden'); return; }
-    const qLower = q.toLowerCase();
 
-    const cryptoMatches = CRYPTOS.filter(c =>
-      c.base.toLowerCase().startsWith(qLower) ||
-      c.name.toLowerCase().includes(qLower)
-    ).slice(0, 8);
+    const [stocks, crypto] = await Promise.all([searchStocks(q), searchCrypto(q)]);
 
-    let stockMatches = [];
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${FINNHUB_KEY}`);
-      const data = await res.json();
-      stockMatches = (data.result || []).slice(0, 10);
-    } catch (e) { /* ignore */ }
-
-    if (cryptoMatches.length === 0 && stockMatches.length === 0) {
+    if (stocks.length === 0 && crypto.length === 0) {
       box.classList.add('hidden'); return;
     }
 
     let html = '';
-    if (cryptoMatches.length) {
+    if (crypto.length) {
       html += `<div class="sug-section">CRYPTO</div>`;
-      html += cryptoMatches.map(c =>
-        `<div class="sug crypto" onclick="selectCrypto('${c.finnhub}')">
-           <span class="sym">${c.base}</span>
-           <span class="desc">${c.name}</span>
-           <span class="pill">CRYPTO</span>
-         </div>`).join('');
+      html += crypto.map(c => {
+        const meta = encodeURIComponent(JSON.stringify(c));
+        const logo = c.logoUrl
+          ? `<img class="logo" src="${safe(c.logoUrl)}" onerror="this.style.display='none'" />`
+          : '';
+        return `<div class="sug crypto" onclick="pickResult('${meta}')">
+          ${logo}
+          <span class="sym">${safe(c.tickerLabel)}</span>
+          <span class="desc">${safe(c.name)}</span>
+          <span class="pill">CRYPTO</span>
+        </div>`;
+      }).join('');
     }
-    if (stockMatches.length) {
+    if (stocks.length) {
       html += `<div class="sug-section">STOCKS</div>`;
-      html += stockMatches.map(it =>
-        `<div class="sug" onclick="selectSuggestion('${it.symbol}')">
-           <span class="sym">${it.symbol}</span>
-           <span class="desc">${(it.description||'').replace(/</g,'&lt;')}</span>
-         </div>`).join('');
+      html += stocks.map(s => {
+        const meta = encodeURIComponent(JSON.stringify(s));
+        return `<div class="sug" onclick="pickResult('${meta}')">
+          <span class="sym">${safe(s.symbol)}</span>
+          <span class="desc">${safe(s.name)}</span>
+        </div>`;
+      }).join('');
     }
     box.innerHTML = html;
     box.classList.remove('hidden');
   }
-  function selectSuggestion(symbol) {
-    document.getElementById('search').value = symbol;
-    document.getElementById('suggestions').classList.add('hidden');
+
+  function pickResult(encodedMeta) {
+    try {
+      const meta = JSON.parse(decodeURIComponent(encodedMeta));
+      // For stocks without a logo, try Clearbit logo by company name (best-effort, no key)
+      // We skip this if it's crypto — CoinGecko already gave us a logo.
+      addToWatchlist(meta.symbol, meta);
+    } catch (e) {
+      console.warn('pickResult failed:', e);
+    }
   }
-  function selectCrypto(finnhubSymbol) {
-    addSymbol(finnhubSymbol);
-    document.getElementById('search').value = '';
-    document.getElementById('suggestions').classList.add('hidden');
-  }
+
   document.addEventListener('click', e => {
     if (!e.target.closest('.search-wrap')) {
       document.getElementById('suggestions').classList.add('hidden');

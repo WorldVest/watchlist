@@ -632,15 +632,17 @@
   function addToWatchlist(symbol, meta) {
     if (!symbol || watchlist[symbol]) return;
     const existing = sortedSymbols();
-    const lastOrder = existing.length
-      ? (watchlist[existing[existing.length-1]].order ?? 0) : 0;
+    // Insert at the top — give new entry an order value lower than the
+    // current minimum so it sorts first.
+    const firstOrder = existing.length
+      ? (watchlist[existing[0]].order ?? 1000) : 1000;
     db.ref('watchlist/' + symbol).set({
       symbol,
       tickerLabel: meta.tickerLabel || symbol,
       name: meta.name || '',
       logoUrl: meta.logoUrl || '',
       addedAt: Date.now(),
-      order: lastOrder + 1000,
+      order: firstOrder - 1000,
     });
     document.getElementById('search').value = '';
     document.getElementById('suggestions').classList.add('hidden');

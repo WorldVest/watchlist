@@ -720,6 +720,16 @@
     }
 
     let html = '';
+    if (stocks.length) {
+      html += `<div class="sug-section">STOCKS</div>`;
+      html += stocks.map(s => {
+        const meta = encodeURIComponent(JSON.stringify(s));
+        return `<div class="sug" onclick="pickResult('${meta}')">
+          <span class="sym">${safe(s.symbol)}</span>
+          <span class="desc">${safe(s.name)}</span>
+        </div>`;
+      }).join('');
+    }
     if (crypto.length) {
       html += `<div class="sug-section">CRYPTO</div>`;
       html += crypto.map(c => {
@@ -732,16 +742,6 @@
           <span class="sym">${safe(c.tickerLabel)}</span>
           <span class="desc">${safe(c.name)}</span>
           <span class="pill">CRYPTO</span>
-        </div>`;
-      }).join('');
-    }
-    if (stocks.length) {
-      html += `<div class="sug-section">STOCKS</div>`;
-      html += stocks.map(s => {
-        const meta = encodeURIComponent(JSON.stringify(s));
-        return `<div class="sug" onclick="pickResult('${meta}')">
-          <span class="sym">${safe(s.symbol)}</span>
-          <span class="desc">${safe(s.name)}</span>
         </div>`;
       }).join('');
     }

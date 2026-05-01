@@ -344,12 +344,12 @@
   /* Narrow screens: chat on top, watchlist below, single column */
   @media (max-width: 768px) {
     body { font-size: 13px; }
-    /* Chat is now ~28vh (was 40vh) so watchlist gets more room.
-       Page can scroll if many tickers — that's fine on mobile. */
+    /* Chat panel ~38vh on mobile so messages are actually readable.
+       Page scrolls naturally for the watchlist below. */
     .app {
       grid-template-columns: 1fr;
-      grid-template-rows: 50px 28vh 1fr;
-      grid-template-rows: 50px 28dvh 1fr;
+      grid-template-rows: 50px 38vh 1fr;
+      grid-template-rows: 50px 38dvh 1fr;
       height: auto;
       min-height: 100vh;
       min-height: 100dvh;

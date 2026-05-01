@@ -344,11 +344,18 @@
   /* Narrow screens: chat on top, watchlist below, single column */
   @media (max-width: 768px) {
     body { font-size: 13px; }
+    /* Chat is now ~28vh (was 40vh) so watchlist gets more room.
+       Page can scroll if many tickers — that's fine on mobile. */
     .app {
       grid-template-columns: 1fr;
-      grid-template-rows: 50px 40vh 1fr;
-      grid-template-rows: 50px 40dvh 1fr;
+      grid-template-rows: 50px 28vh 1fr;
+      grid-template-rows: 50px 28dvh 1fr;
+      height: auto;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
+    body { overflow: auto; }
+    .table-wrap { overflow: visible; }
     /* Top bar simplifications */
     .topbar { padding: 0 12px; gap: 10px; height: 50px; }
     .top-stats { display: none; }

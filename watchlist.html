@@ -101,6 +101,45 @@
   .brand .name { font-weight: 700; font-size: 18px; }
   .brand .name span { color: var(--accent); }
   .brand-right { margin-left: auto; }
+  .nav-link {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .nav-link span { color: var(--accent); }
+  .nav-link:hover {
+    color: var(--text);
+    border-color: var(--line-bright);
+    background: rgba(0,255,174,0.04);
+  }
+  .nav-link.active {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(0,255,174,0.06);
+  }
+  .lock-btn {
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--text-faint);
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    margin-left: 12px;
+  }
+  .lock-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(0,255,174,0.06);
+  }
 
   .top-stats {
     display: flex; gap: 28px; margin-left: 8px;
@@ -362,6 +401,8 @@
     .brand .name { font-size: 15px; letter-spacing: 0.12em; }
     .brand .orb { width: 22px; height: 22px; }
     .brand-right .name { font-size: 14px; }
+    .nav-link { font-size: 13px; padding: 4px 10px; letter-spacing: 0.12em; }
+    .lock-btn { padding: 5px 8px; font-size: 11px; margin-left: 8px; }
 
     /* Chat panel sits on top */
     .chat {
@@ -430,12 +471,14 @@
       <div class="orb"></div>
       <div><div class="name">WORLD<span>VEST</span></div></div>
     </div>
+    <a class="nav-link" href="news.html">NEWS<span>FEED</span></a>
     <div class="top-stats">
       <div class="stat"><span>FEED</span><b id="feed-status" class="live">LIVE</b></div>
       <div class="stat"><span>SYMBOLS</span><b id="stat-symbols">0</b></div>
       <div class="stat"><span>LAST SYNC</span><b id="stat-sync">—</b></div>
     </div>
     <div class="brand brand-right"><div class="name">WATCH<span>LIST</span></div></div>
+    <button class="lock-btn" onclick="logout()" title="Sign out"><i class="fa-solid fa-lock"></i></button>
   </header>
 
   <aside class="chat">
@@ -485,6 +528,12 @@
 </div>
 
 <script>
+  // ============ GATE CHECK ============
+  // If the user hasn't unlocked via the landing page, bounce them back.
+  if (localStorage.getItem("worldvest_unlocked") !== "true") {
+    window.location.replace("index.html");
+  }
+
   // ============ CONFIG ============
   const firebaseConfig = {
     apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
@@ -813,6 +862,12 @@
   }
 
   function deleteMessage(key) { db.ref('chat/' + key).remove(); }
+
+  function logout() {
+    if (!confirm('Sign out and return to the landing page?')) return;
+    localStorage.removeItem('worldvest_unlocked');
+    window.location.replace('index.html');
+  }
 
   function sendMessage() {
     const input = document.getElementById('chat-input');

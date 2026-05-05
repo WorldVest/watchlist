@@ -11,6 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
 <style>
   :root {
     --bg-0: #05070d;
@@ -163,6 +166,14 @@
     color: var(--text-faint); font-weight: 700;
     min-width: 28px; padding-top: 3px;
   }
+  .news-item .thumb {
+    width: 88px; height: 64px; flex-shrink: 0;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    object-fit: cover;
+    display: block;
+  }
+  .news-item .thumb.hidden { display: none; }
   .news-item .body { flex: 1; min-width: 0; }
   .news-item .headline {
     font-family: 'JetBrains Mono', monospace;
@@ -274,6 +285,7 @@
     .news-head { padding: 12px 14px; }
     .news-item { padding: 14px; gap: 12px; }
     .news-item .num { min-width: 22px; font-size: 9px; }
+    .news-item .thumb { width: 64px; height: 48px; }
     .news-item .headline { font-size: 14px; }
     .news-item .meta { font-size: 9px; gap: 8px; flex-wrap: wrap; }
     .gate-form { flex-direction: column; }
@@ -316,7 +328,7 @@
   <section class="gate-section">
     <div class="label">Members Access</div>
     <form class="gate-form" id="gate-form" onsubmit="return submitGate(event)" autocomplete="off">
-      <input type="password" id="password" placeholder="Enter access code"
+      <input type="password" id="password" placeholder="Enter password"
              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
       <button type="submit" class="enter-btn">
         Enter Watchlist <i class="fa-solid fa-arrow-right"></i>
@@ -327,8 +339,8 @@
 
   <!-- FOOTER -->
   <footer class="footer">
-    <span>© WorldVest</span>
-    <span>2026</span>
+    <span>© WorldVest 2026</span>
+    <span></span>
   </footer>
 
 </main>
@@ -349,7 +361,7 @@
   //
   // Default placeholder hash below = the word "changeme" (so the page still
   // works on first deploy). Replace it with your own hash before going live.
-  const PASSWORD_HASH = "1009d711aa9c533977a457c96bbfcf224422b63c5424c1106a8e1d52602a8a44";
+  const PASSWORD_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 
   // localStorage key for "remember me"
   const UNLOCK_KEY = "worldvest_unlocked";
@@ -385,7 +397,7 @@
       window.location.href = "watchlist.html";
     } else {
       form.classList.add('shake', 'error');
-      errorEl.textContent = "Incorrect access code";
+      errorEl.textContent = "Incorrect password";
       input.value = '';
       setTimeout(() => {
         form.classList.remove('shake', 'error');
@@ -396,23 +408,98 @@
   }
 
   // ============ NEWS ============
-  // Finnhub /news?category=general — free tier, no auth headaches
+  // Mix 3 general market headlines + 2 from watchlist symbols (if any)
+  // Uses Firebase via the compat SDK (loaded above for watchlist data)
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
+    authDomain: "watchlist-d9ade.firebaseapp.com",
+    projectId: "watchlist-d9ade",
+    storageBucket: "watchlist-d9ade.firebasestorage.app",
+    messagingSenderId: "927853955548",
+    appId: "1:927853955548:web:dedd485e291d3804542719",
+    measurementId: "G-9QNQ8ZVLSR"
+  };
+  let fbApp = null, fbDb = null;
+  function ensureFirebase() {
+    if (!fbDb && window.firebase) {
+      try {
+        fbApp = firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.database();
+      } catch (e) { /* already initialized */ fbDb = firebase.database(); }
+    }
+    return fbDb;
+  }
+
+  function isCryptoSym(symbol) {
+    return symbol.startsWith('CG:') || symbol.includes(':');
+  }
+
+  async function fetchGeneralNews() {
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+      if (!res.ok) return [];
+      const items = await res.json();
+      return (items || []).filter(it => it.headline && it.headline.trim().length > 0);
+    } catch (e) { return []; }
+  }
+
+  async function fetchWatchlistNews() {
+    try {
+      const db = ensureFirebase();
+      if (!db) return [];
+      const snap = await db.ref('watchlist').once('value');
+      const data = snap.val() || {};
+      const stockSyms = Object.keys(data).filter(s => !isCryptoSym(s));
+      if (stockSyms.length === 0) return [];
+
+      const today = new Date();
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const fmt = d => d.toISOString().slice(0,10);
+      const fromDate = fmt(weekAgo);
+      const toDate = fmt(today);
+
+      const results = await Promise.all(stockSyms.map(async sym => {
+        try {
+          const res = await fetch(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(sym)}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`);
+          if (!res.ok) return [];
+          const items = await res.json();
+          const top = (items || [])
+            .filter(it => it.headline && it.headline.trim().length > 0)
+            .sort((a,b) => (b.datetime||0) - (a.datetime||0))
+            .slice(0, 1);
+          return top.map(it => ({ ...it, _sym: sym }));
+        } catch (e) { return []; }
+      }));
+
+      const flat = results.flat();
+      flat.sort((a,b) => (b.datetime||0) - (a.datetime||0));
+      return flat;
+    } catch (e) { return []; }
+  }
+
   async function loadNews() {
     const listEl = document.getElementById('news-list');
     const updatedEl = document.getElementById('news-updated');
+
     try {
-      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const items = await res.json();
-      if (!Array.isArray(items) || items.length === 0) {
+      const [general, watchlist] = await Promise.all([
+        fetchGeneralNews(),
+        fetchWatchlistNews(),
+      ]);
+
+      // 3 general + 2 watchlist (if available; otherwise pad with general)
+      const generalPicks = general.slice(0, 3);
+      const watchlistPicks = watchlist.slice(0, 2);
+      let combined = [...generalPicks, ...watchlistPicks];
+      if (combined.length < 5) {
+        combined = [...combined, ...general.slice(3, 3 + (5 - combined.length))];
+      }
+      combined = combined.slice(0, 5);
+
+      if (combined.length === 0) {
         listEl.innerHTML = '<div class="news-error">No headlines available right now.</div>';
         return;
       }
-
-      // Pick the 5 most recent items that have headlines
-      const top = items
-        .filter(it => it.headline && it.headline.trim().length > 0)
-        .slice(0, 5);
 
       const safe = s => String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
       const ago = sec => {
@@ -424,19 +511,29 @@
         return Math.floor(diff/86400) + 'd ago';
       };
 
-      listEl.innerHTML = top.map((it, i) => `
+      listEl.innerHTML = combined.map((it, i) => {
+        const thumb = it.image && it.image.startsWith('http')
+          ? `<img class="thumb" src="${safe(it.image)}" alt="" loading="lazy" onerror="this.classList.add('hidden')" />`
+          : '';
+        const tickerBadge = it._sym
+          ? `<span class="source" style="color:var(--accent)">${safe(it._sym)}</span><span class="dot"></span>`
+          : '';
+        return `
         <a class="news-item" href="${safe(it.url)}" target="_blank" rel="noopener noreferrer">
           <div class="num">${String(i+1).padStart(2,'0')}</div>
+          ${thumb}
           <div class="body">
             <div class="headline">${safe(it.headline)}</div>
             <div class="meta">
+              ${tickerBadge}
               <span class="source">${safe(it.source || 'Source')}</span>
               <span class="dot"></span>
               <span>${ago(it.datetime)}</span>
             </div>
           </div>
         </a>
-      `).join('');
+      `;
+      }).join('');
 
       const now = new Date();
       updatedEl.textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});

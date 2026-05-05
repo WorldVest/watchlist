@@ -562,7 +562,9 @@
       let friendly = `Sorry, I hit an error: ${e.message}`;
       if (e.status === 429 || /rate|quota|429/i.test(e.message)) {
         friendly = "I'm being rate-limited. The free Gemini tier allows about 10 requests per minute and 250 per day. Wait a minute and try again. Daily limit resets at midnight Pacific time.";
-      } else if (e.status === 503 || /not configured/i.test(e.message)) {
+      } else if (e.status === 503 || /high demand|unavailable|503/i.test(e.message)) {
+        friendly = "Gemini is experiencing high demand right now (this happens on the free tier). Try again in a few minutes — usually clears up quickly.";
+      } else if (/not configured/i.test(e.message)) {
         friendly = "The agent isn't configured yet. The Gemini API key needs to be set in the Render service environment variables.";
       } else if (/failed to fetch|network/i.test(e.message)) {
         friendly = "Couldn't reach the agent server. The Render service might be cold-starting (gives it ~30 seconds), or there's a network issue. Try again shortly.";

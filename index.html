@@ -11,9 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-
 <style>
   :root {
     --bg-0: #05070d;
@@ -408,95 +405,19 @@
   }
 
   // ============ NEWS ============
-  // Mix 3 general market headlines + 2 from watchlist symbols (if any)
-  // Uses Firebase via the compat SDK (loaded above for watchlist data)
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
-    authDomain: "watchlist-d9ade.firebaseapp.com",
-    projectId: "watchlist-d9ade",
-    storageBucket: "watchlist-d9ade.firebasestorage.app",
-    messagingSenderId: "927853955548",
-    appId: "1:927853955548:web:dedd485e291d3804542719",
-    measurementId: "G-9QNQ8ZVLSR"
-  };
-  let fbApp = null, fbDb = null;
-  function ensureFirebase() {
-    if (!fbDb && window.firebase) {
-      try {
-        fbApp = firebase.initializeApp(firebaseConfig);
-        fbDb = firebase.database();
-      } catch (e) { /* already initialized */ fbDb = firebase.database(); }
-    }
-    return fbDb;
-  }
-
-  function isCryptoSym(symbol) {
-    return symbol.startsWith('CG:') || symbol.includes(':');
-  }
-
-  async function fetchGeneralNews() {
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
-      if (!res.ok) return [];
-      const items = await res.json();
-      return (items || []).filter(it => it.headline && it.headline.trim().length > 0);
-    } catch (e) { return []; }
-  }
-
-  async function fetchWatchlistNews() {
-    try {
-      const db = ensureFirebase();
-      if (!db) return [];
-      const snap = await db.ref('watchlist').once('value');
-      const data = snap.val() || {};
-      const stockSyms = Object.keys(data).filter(s => !isCryptoSym(s));
-      if (stockSyms.length === 0) return [];
-
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const fmt = d => d.toISOString().slice(0,10);
-      const fromDate = fmt(weekAgo);
-      const toDate = fmt(today);
-
-      const results = await Promise.all(stockSyms.map(async sym => {
-        try {
-          const res = await fetch(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(sym)}&from=${fromDate}&to=${toDate}&token=${FINNHUB_KEY}`);
-          if (!res.ok) return [];
-          const items = await res.json();
-          const top = (items || [])
-            .filter(it => it.headline && it.headline.trim().length > 0)
-            .sort((a,b) => (b.datetime||0) - (a.datetime||0))
-            .slice(0, 1);
-          return top.map(it => ({ ...it, _sym: sym }));
-        } catch (e) { return []; }
-      }));
-
-      const flat = results.flat();
-      flat.sort((a,b) => (b.datetime||0) - (a.datetime||0));
-      return flat;
-    } catch (e) { return []; }
-  }
-
+  // Landing page shows general market headlines only.
   async function loadNews() {
     const listEl = document.getElementById('news-list');
     const updatedEl = document.getElementById('news-updated');
-
     try {
-      const [general, watchlist] = await Promise.all([
-        fetchGeneralNews(),
-        fetchWatchlistNews(),
-      ]);
+      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = await res.json();
+      const top = (items || [])
+        .filter(it => it.headline && it.headline.trim().length > 0)
+        .slice(0, 5);
 
-      // 3 general + 2 watchlist (if available; otherwise pad with general)
-      const generalPicks = general.slice(0, 3);
-      const watchlistPicks = watchlist.slice(0, 2);
-      let combined = [...generalPicks, ...watchlistPicks];
-      if (combined.length < 5) {
-        combined = [...combined, ...general.slice(3, 3 + (5 - combined.length))];
-      }
-      combined = combined.slice(0, 5);
-
-      if (combined.length === 0) {
+      if (top.length === 0) {
         listEl.innerHTML = '<div class="news-error">No headlines available right now.</div>';
         return;
       }
@@ -511,29 +432,19 @@
         return Math.floor(diff/86400) + 'd ago';
       };
 
-      listEl.innerHTML = combined.map((it, i) => {
-        const thumb = it.image && it.image.startsWith('http')
-          ? `<img class="thumb" src="${safe(it.image)}" alt="" loading="lazy" onerror="this.classList.add('hidden')" />`
-          : '';
-        const tickerBadge = it._sym
-          ? `<span class="source" style="color:var(--accent)">${safe(it._sym)}</span><span class="dot"></span>`
-          : '';
-        return `
+      listEl.innerHTML = top.map((it, i) => `
         <a class="news-item" href="${safe(it.url)}" target="_blank" rel="noopener noreferrer">
           <div class="num">${String(i+1).padStart(2,'0')}</div>
-          ${thumb}
           <div class="body">
             <div class="headline">${safe(it.headline)}</div>
             <div class="meta">
-              ${tickerBadge}
               <span class="source">${safe(it.source || 'Source')}</span>
               <span class="dot"></span>
               <span>${ago(it.datetime)}</span>
             </div>
           </div>
         </a>
-      `;
-      }).join('');
+      `).join('');
 
       const now = new Date();
       updatedEl.textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});

@@ -3,19 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#05070d" />
 <title>WORLDVEST</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
 <style>
   :root {
@@ -30,24 +24,24 @@
     --accent: #00ffae;
     --accent-glow: #00ffae40;
     --warn: #ff5277;
-    --gold: #f7b955;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; padding: 0; height: 100%;
+    margin: 0; padding: 0; min-height: 100%;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
-  /* Disable iOS double-tap zoom but keep accessibility scaling */
-  html { touch-action: manipulation; }
   body {
     background: var(--bg-0);
     color: var(--text);
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 13px;
-    overflow: hidden;
     position: relative;
+    overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
+  /* Animated grid backdrop */
   body::before {
     content: ""; position: fixed; inset: 0;
     background:
@@ -56,6 +50,7 @@
     pointer-events: none; z-index: 0; animation: drift 30s linear infinite;
   }
   @keyframes drift { from { background-position: 0 0, 0 0; } to { background-position: 0 44px, 44px 0; } }
+  /* Scanline overlay */
   body::after {
     content: ""; position: fixed; inset: 0;
     background: repeating-linear-gradient(to bottom,
@@ -63,358 +58,232 @@
       transparent 1px, transparent 3px);
     pointer-events: none; mix-blend-mode: overlay; z-index: 1;
   }
-  .glow { position: fixed; width: 900px; height: 900px; border-radius: 50%;
-          pointer-events: none; z-index: 0; filter: blur(40px); }
+  /* Glow blobs */
+  .glow {
+    position: fixed; width: 900px; height: 900px; border-radius: 50%;
+    pointer-events: none; z-index: 0; filter: blur(40px);
+  }
   .glow.tl { top: -300px; left: -300px;
              background: radial-gradient(circle, rgba(0,255,174,0.10), transparent 60%); }
   .glow.br { bottom: -400px; right: -300px;
              background: radial-gradient(circle, rgba(74,216,255,0.08), transparent 60%); }
 
-  /* ========== DESKTOP LAYOUT ========== */
-  .app { position: relative; z-index: 2; display: grid;
-         grid-template-columns: 33fr 67fr; grid-template-rows: 56px 1fr;
-         height: 100vh; height: 100dvh; }
+  .page {
+    position: relative; z-index: 2;
+    max-width: 1100px; margin: 0 auto;
+    padding: 60px 32px 80px;
+    display: flex; flex-direction: column; gap: 56px;
+    min-height: 100vh; min-height: 100dvh;
+  }
 
-  .topbar {
-    grid-column: 1 / -1;
-    border-bottom: 1px solid var(--line);
-    background: rgba(5,7,13,0.85); backdrop-filter: blur(8px);
-    display: flex; align-items: center; padding: 0 20px; gap: 22px;
+  /* ========== HERO ========== */
+  .hero {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 18px; padding: 40px 0 8px; text-align: center;
     position: relative;
   }
-  .topbar::after {
-    content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.4;
-  }
-  .brand { display: flex; align-items: center; gap: 12px;
-           font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.18em; }
-  .brand .orb {
-    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  .hero .orb {
+    width: 56px; height: 56px; border-radius: 50%;
     background: radial-gradient(circle at 30% 30%, #00ffae 0%, #00b888 35%, #003c5a 70%, #0a0e1a 100%);
-    box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4);
+    box-shadow: 0 0 50px var(--accent-glow), inset 0 0 18px rgba(255,255,255,0.4);
     animation: pulseOrb 3s ease-in-out infinite;
+    margin-bottom: 6px;
   }
   @keyframes pulseOrb {
-    0%,100% { box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4); }
-    50%     { box-shadow: 0 0 36px var(--accent-glow), inset 0 0 14px rgba(255,255,255,0.5); }
+    0%,100% { box-shadow: 0 0 50px var(--accent-glow), inset 0 0 18px rgba(255,255,255,0.4); }
+    50%     { box-shadow: 0 0 80px var(--accent-glow), inset 0 0 22px rgba(255,255,255,0.5); }
   }
-  .brand .name { font-weight: 700; font-size: 18px; }
-  .brand .name span { color: var(--accent); }
-  .brand-right { margin-left: auto; }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(48px, 9vw, 96px);
+    letter-spacing: 0.18em;
+    margin: 0; line-height: 1;
+    text-shadow: 0 0 40px rgba(0,255,174,0.25);
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .slogan {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(11px, 1.4vw, 14px);
+    letter-spacing: 0.4em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  /* Decorative divider beneath hero */
+  .hero::after {
+    content: ""; display: block;
+    width: 80px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin-top: 14px;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
 
-  .top-stats {
-    display: flex; gap: 28px; margin-left: 8px;
-    border-left: 1px solid var(--line); padding-left: 24px;
+  /* ========== NEWS SECTION ========== */
+  .news {
+    border: 1px solid var(--line);
+    background: rgba(10,14,26,0.5);
+    backdrop-filter: blur(8px);
   }
-  .stat { display: flex; flex-direction: column; gap: 2px;
-          font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); }
-  .stat b { font-size: 13px; letter-spacing: 0.05em; color: var(--text); font-weight: 600; }
-  .stat .live { color: var(--accent); }
-  .stat .live::before {
-    content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
-    background: var(--accent); margin-right:6px; transform: translateY(-2px);
-    box-shadow: 0 0 8px var(--accent); animation: blink 1.4s ease-in-out infinite;
-  }
-  /* Stale indicator: when prices haven't updated in >2 min */
-  .stat .live.stale { color: var(--warn); }
-  .stat .live.stale::before { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-  /* CHAT */
-  .chat {
-    border-right: 1px solid var(--line);
-    background: linear-gradient(180deg, rgba(10,14,26,0.7) 0%, rgba(5,7,13,0.95) 100%);
-    display: flex; flex-direction: column; min-height: 0;
-  }
-  .panel-head {
-    height: 44px; min-height: 44px;
+  .news-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 18px; border-bottom: 1px solid var(--line);
-    font-size: 10px; letter-spacing: 0.3em; color: var(--text-dim);
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
     background: rgba(0,0,0,0.3);
   }
-  .panel-head .tag { color: var(--accent); display: inline-flex; align-items: center; gap: 8px; }
-  .panel-head .tag::before {
-    content:""; width:6px; height:6px; background: var(--accent); box-shadow: 0 0 8px var(--accent);
+  .news-head .tag {
+    font-size: 10px; letter-spacing: 0.3em; color: var(--accent);
+    display: inline-flex; align-items: center; gap: 8px;
+    text-transform: uppercase;
   }
-  .messages {
-    flex: 1; overflow-y: auto; padding: 18px;
-    display: flex; flex-direction: column; gap: 14px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent;
+  .news-head .tag::before {
+    content:""; width:6px; height:6px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: blink 1.4s ease-in-out infinite;
   }
-  .messages::-webkit-scrollbar { width: 6px; }
-  .messages::-webkit-scrollbar-thumb { background: var(--line-bright); border-radius: 3px; }
-  .msg {
-    border-left: 2px solid var(--line-bright); padding: 8px 0 8px 14px;
-    animation: fadeIn 0.4s ease; position: relative; padding-right: 28px;
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .news-head .updated {
+    font-size: 10px; letter-spacing: 0.2em; color: var(--text-faint);
+    text-transform: uppercase;
   }
-  .msg .h { display: flex; gap: 12px; align-items: baseline;
-            font-size: 12px; letter-spacing: 0.12em; color: var(--text-faint); margin-bottom: 5px; }
-  .msg .h .who { color: var(--accent); font-weight: 600; }
-  .msg .body { font-size: 15px; color: var(--text); line-height: 1.55; word-break: break-word; }
-  .msg .x {
-    position: absolute; top: 6px; right: 4px;
-    background: transparent; border: none; cursor: pointer;
-    color: var(--text-faint); font-size: 14px; padding: 6px 8px;
-    opacity: 0; transition: opacity .15s, color .15s;
-    font-family: inherit;
-  }
-  .msg:hover .x { opacity: 1; }
-  .msg .x:hover { color: var(--warn); }
-  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
 
-  .composer {
-    border-top: 1px solid var(--line); padding: 14px;
-    background: rgba(0,0,0,0.4);
-    display: flex; flex-direction: column; gap: 10px;
+  .news-list { display: flex; flex-direction: column; }
+
+  .news-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex; gap: 18px; align-items: flex-start;
+    text-decoration: none; color: inherit;
+    transition: background .15s;
   }
-  .composer input {
-    width: 100%; background: var(--bg-1); border: 1px solid var(--line);
-    color: var(--text); font-family: inherit; font-size: 16px; /* 16px prevents iOS zoom on focus */
-    padding: 10px 14px; outline: none;
+  .news-item:last-child { border-bottom: none; }
+  .news-item:hover { background: rgba(0,255,174,0.04); }
+  .news-item .num {
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--text-faint); font-weight: 700;
+    min-width: 28px; padding-top: 3px;
+  }
+  .news-item .body { flex: 1; min-width: 0; }
+  .news-item .headline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; line-height: 1.4;
+    color: var(--text); font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .news-item:hover .headline { color: var(--accent); }
+  .news-item .meta {
+    display: flex; gap: 12px; align-items: center;
+    font-size: 10px; letter-spacing: 0.15em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .news-item .meta .source { color: var(--text-dim); font-weight: 600; }
+  .news-item .meta .dot { width: 3px; height: 3px; background: var(--text-faint); border-radius: 50%; }
+
+  .news-loading, .news-error {
+    padding: 40px 20px; text-align: center;
+    color: var(--text-faint);
+    font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* ========== GATE ========== */
+  .gate-section {
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    padding: 24px 0;
+  }
+  .gate-section .label {
+    font-size: 10px; letter-spacing: 0.4em; color: var(--text-faint);
+    text-transform: uppercase;
+  }
+  .gate-form {
+    display: flex; gap: 0;
+    width: 100%; max-width: 520px;
+    border: 1px solid var(--line);
+    background: rgba(10,14,26,0.6);
+    backdrop-filter: blur(8px);
     transition: border-color .15s, box-shadow .15s;
-    -webkit-appearance: none; appearance: none; border-radius: 0;
   }
-  .composer input:focus {
+  .gate-form:focus-within {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent-glow), 0 0 18px rgba(0,255,174,0.15);
+    box-shadow: 0 0 0 1px var(--accent-glow), 0 0 30px rgba(0,255,174,0.15);
   }
-  .composer .row { display: flex; gap: 10px; }
-  .composer .row input { flex: 1; min-width: 0; }
-  .btn {
+  .gate-form.shake { animation: shake 0.4s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+  }
+  .gate-form.error { border-color: var(--warn); }
+
+  #password {
+    flex: 1; min-width: 0;
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-family: inherit;
+    font-size: 16px; /* prevents iOS zoom */
+    letter-spacing: 0.15em;
+    padding: 16px 20px;
+    -webkit-appearance: none; appearance: none;
+  }
+  #password::placeholder {
+    color: var(--text-faint); letter-spacing: 0.15em;
+    text-transform: uppercase; font-size: 13px;
+  }
+
+  .enter-btn {
     background: linear-gradient(180deg, #00ffae 0%, #00b888 100%);
     color: #03130d; font-family: 'JetBrains Mono', monospace;
-    font-weight: 700; letter-spacing: 0.2em; font-size: 11px;
-    padding: 0 18px; border: none; cursor: pointer;
-    transition: transform .1s, box-shadow .15s, filter .15s;
+    font-weight: 700; letter-spacing: 0.25em; font-size: 12px;
+    padding: 0 28px; border: none; cursor: pointer;
+    transition: filter .15s, box-shadow .15s, transform .1s;
     text-transform: uppercase;
     -webkit-appearance: none; appearance: none; border-radius: 0;
     flex-shrink: 0;
-    min-height: 44px;
+    display: flex; align-items: center; gap: 10px;
+    min-height: 52px;
   }
-  .btn:hover { box-shadow: 0 0 24px var(--accent-glow); filter: brightness(1.1); }
-  .btn:active { transform: translateY(1px); }
+  .enter-btn:hover { filter: brightness(1.1); box-shadow: 0 0 30px var(--accent-glow); }
+  .enter-btn:active { transform: translateY(1px); }
+  .enter-btn i { font-size: 11px; }
 
-  .main {
-    display: flex; flex-direction: column; min-height: 0;
-    background: radial-gradient(ellipse at top, rgba(0,255,174,0.04), transparent 60%), var(--bg-0);
+  .gate-error {
+    color: var(--warn); font-size: 10px; letter-spacing: 0.25em;
+    text-transform: uppercase; height: 14px;
   }
-  .toolbar {
-    display: flex; align-items: center; gap: 14px;
-    padding: 16px 24px; border-bottom: 1px solid var(--line);
-    background: rgba(0,0,0,0.3);
-  }
-  .search-wrap { flex: 1; position: relative; min-width: 0; }
-  .search-wrap .icon {
-    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-    color: var(--text-faint); font-size: 12px; pointer-events: none;
-  }
-  .search-wrap input {
-    width: 100%; background: var(--bg-1); border: 1px solid var(--line);
-    color: var(--text); font-family: inherit; font-size: 16px; /* 16px prevents iOS zoom */
-    padding: 11px 14px 11px 38px; outline: none; letter-spacing: 0.05em;
-    -webkit-appearance: none; appearance: none; border-radius: 0;
-  }
-  .search-wrap input::placeholder { color: var(--text-faint); letter-spacing: 0.05em; font-size: 14px; }
-  .search-wrap input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent-glow), 0 0 18px rgba(0,255,174,0.15);
-  }
-  #suggestions {
-    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-    background: var(--bg-1); border: 1px solid var(--line-bright);
-    max-height: 420px; overflow-y: auto; z-index: 100;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-    -webkit-overflow-scrolling: touch;
-  }
-  #suggestions.hidden { display: none; }
-  .sug-section {
-    font-size: 9px; letter-spacing: 0.3em; color: var(--text-faint);
-    padding: 10px 16px 6px; text-transform: uppercase;
-    background: rgba(0,0,0,0.3);
-  }
-  .sug {
-    padding: 12px 16px; border-bottom: 1px solid var(--line);
-    cursor: pointer; font-size: 13px; display: flex; gap: 12px; align-items: center;
-    transition: background .1s;
-  }
-  .sug:hover, .sug:active { background: rgba(0,255,174,0.08); }
-  .sug img.logo {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--bg-0); object-fit: cover; flex-shrink: 0;
-  }
-  .sug .sym { color: var(--accent); font-weight: 700; min-width: 70px; }
-  .sug.crypto .sym { color: var(--gold); }
-  .sug .desc { color: var(--text-dim); flex:1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sug .pill {
-    font-size: 9px; letter-spacing: 0.15em; padding: 2px 6px;
-    border: 1px solid var(--line-bright); color: var(--text-faint); flex-shrink: 0;
-  }
-  .sug.crypto .pill { color: var(--gold); border-color: rgba(247,185,85,0.3); }
 
-  .table-wrap { flex: 1; overflow: auto; padding: 0; -webkit-overflow-scrolling: touch; }
-  table { width: 100%; border-collapse: collapse; }
-  thead th {
-    position: sticky; top: 0;
-    background: rgba(5,7,13,0.95); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line-bright);
-    text-align: right; padding: 14px 16px;
-    font-size: 11px; font-weight: 700;
-    letter-spacing: 0.22em;
-    color: var(--header);
-    text-shadow: 0 0 12px rgba(184,200,255,0.25);
-    text-transform: uppercase; z-index: 5;
-    white-space: nowrap;
+  /* ========== FOOTER ========== */
+  .footer {
+    margin-top: auto;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: 0.25em;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    flex-wrap: wrap; gap: 12px;
   }
-  thead th:first-child { text-align: left; padding-left: 24px; }
-  thead th:last-child { text-align: right; padding-right: 24px; }
 
-  tbody tr {
-    border-bottom: 1px solid var(--line);
-    transition: background .15s, opacity .15s;
-    position: relative;
-  }
-  tbody tr:hover { background: rgba(0,255,174,0.025); }
-  tbody tr.dragging { opacity: 0.35; }
-  tbody tr.drag-over-top    { box-shadow: inset 0 2px 0 var(--accent); }
-  tbody tr.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
-
-  tbody td {
-    padding: 18px 16px; text-align: right;
-    font-size: 14px; font-variant-numeric: tabular-nums;
-  }
-  tbody td:first-child { padding-left: 24px; text-align: left; }
-  tbody td:last-child { padding-right: 24px; }
-
-  .asset { display: flex; align-items: center; gap: 12px; }
-  .drag-handle {
-    cursor: grab; color: var(--text-faint); font-size: 14px;
-    padding: 4px 6px; user-select: none; -webkit-user-select: none;
-    transition: color .15s; flex-shrink: 0;
-  }
-  .drag-handle:hover { color: var(--accent); }
-  .drag-handle:active { cursor: grabbing; }
-  .asset .logo {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--bg-1); border: 1px solid var(--line-bright);
-    object-fit: cover; flex-shrink: 0;
-  }
-  .asset .logo-fallback {
-    width: 36px; height: 36px;
-    background: var(--bg-1); border: 1px solid var(--line-bright);
-    display: grid; place-items: center;
-    font-size: 10px; font-weight: 700; color: var(--accent);
-    letter-spacing: 0.05em; flex-shrink: 0;
-  }
-  .asset .logo-fallback.crypto { color: var(--gold); border-color: rgba(247,185,85,0.3); }
-  .asset .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .asset .sym { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
-  .asset .sym.crypto { color: var(--gold); }
-  .asset .name { font-size: 11px; color: var(--text-faint); letter-spacing: 0.05em;
-                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .price { font-size: 18px; font-weight: 600; color: var(--text); white-space: nowrap; }
-  .pct {
-    font-weight: 600; padding: 5px 12px; display: inline-block;
-    min-width: 90px; text-align: right;
-    border: 1px solid transparent; font-size: 13px;
-    white-space: nowrap;
-  }
-  .pct.up   { color: var(--accent); border-color: rgba(0,255,174,0.25); background: rgba(0,255,174,0.06); }
-  .pct.down { color: var(--warn);   border-color: rgba(255,82,119,0.25); background: rgba(255,82,119,0.06); }
-  .pct.flat { color: var(--text-dim); }
-
-  .del {
-    background: transparent; border: 1px solid var(--line-bright);
-    color: var(--text-faint); padding: 6px 10px; cursor: pointer;
-    font-family: inherit; font-size: 11px; transition: all .15s;
-    -webkit-appearance: none; appearance: none; border-radius: 0;
-    min-height: 36px;
-  }
-  .del:hover { color: var(--warn); border-color: var(--warn); background: rgba(255,82,119,0.08); }
-
-  .empty { padding: 80px 40px; text-align: center; color: var(--text-dim); }
-  .empty h3 { font-family: 'Space Grotesk', sans-serif; color: var(--text);
-              letter-spacing: 0.2em; font-size: 16px; margin: 0 0 8px; }
-  .empty p { font-size: 12px; color: var(--text-faint); letter-spacing: 0.05em; }
-  .empty.hidden { display: none; }
-
-  /* ========== MOBILE LAYOUT ========== */
-  /* Narrow screens: chat on top, watchlist below, single column */
-  @media (max-width: 768px) {
-    body { font-size: 13px; }
-    /* Chat panel takes half the viewport on mobile.
-       Page scrolls naturally for the watchlist below. */
-    .app {
-      grid-template-columns: 1fr;
-      grid-template-rows: 50px 50vh 1fr;
-      grid-template-rows: 50px 50dvh 1fr;
-      height: auto;
-      min-height: 100vh;
-      min-height: 100dvh;
+  /* ========== MOBILE ========== */
+  @media (max-width: 640px) {
+    .page { padding: 32px 18px 48px; gap: 36px; }
+    .hero { padding: 16px 0 4px; }
+    .hero h1 { letter-spacing: 0.12em; }
+    .hero .slogan { letter-spacing: 0.3em; }
+    .news-head { padding: 12px 14px; }
+    .news-item { padding: 14px; gap: 12px; }
+    .news-item .num { min-width: 22px; font-size: 9px; }
+    .news-item .headline { font-size: 14px; }
+    .news-item .meta { font-size: 9px; gap: 8px; flex-wrap: wrap; }
+    .gate-form { flex-direction: column; }
+    #password { padding: 14px 16px; text-align: center; }
+    .enter-btn {
+      width: 100%; justify-content: center;
+      border-top: 1px solid var(--line);
+      min-height: 52px;
     }
-    body { overflow: auto; }
-    .table-wrap { overflow: visible; }
-    /* Top bar simplifications */
-    .topbar { padding: 0 12px; gap: 10px; height: 50px; }
-    .top-stats { display: none; }
-    .brand .name { font-size: 15px; letter-spacing: 0.12em; }
-    .brand .orb { width: 22px; height: 22px; }
-    .brand-right .name { font-size: 14px; }
-
-    /* Chat panel sits on top */
-    .chat {
-      border-right: none;
-      border-bottom: 1px solid var(--line);
-    }
-    .panel-head { height: 38px; min-height: 38px; padding: 0 14px; font-size: 9px; }
-    .messages { padding: 12px; gap: 10px; }
-    .msg { padding: 6px 0 6px 12px; padding-right: 30px; }
-    .msg .h { font-size: 11px; gap: 8px; margin-bottom: 3px; }
-    .msg .body { font-size: 14px; line-height: 1.45; }
-    .msg .x { opacity: 0.7; font-size: 16px; padding: 8px; top: 4px; right: 0; }
-    .composer { padding: 10px; gap: 8px; }
-    .composer input { padding: 12px 14px; }
-    .btn { padding: 0 16px; min-height: 44px; }
-
-    /* Watchlist toolbar */
-    .toolbar { padding: 12px; gap: 10px; }
-    .search-wrap input { padding: 12px 14px 12px 36px; }
-    .search-wrap input::placeholder { font-size: 13px; }
-
-    /* Hide secondary table columns on mobile to fit nicely */
-    /* We'll keep: Asset, Price, 1D % */
-    thead th { padding: 10px 8px; font-size: 9px; letter-spacing: 0.15em; }
-    thead th:first-child { padding-left: 12px; }
-    thead th:last-child { padding-right: 12px; }
-    tbody td { padding: 14px 8px; font-size: 13px; }
-    tbody td:first-child { padding-left: 12px; }
-    tbody td:last-child { padding-right: 12px; }
-
-    /* Hide the drag handle on mobile (drag-and-drop doesn't work on touch anyway) */
-    .drag-handle { display: none; }
-
-    .asset { gap: 10px; }
-    .asset .logo, .asset .logo-fallback { width: 32px; height: 32px; }
-    .asset .sym { font-size: 14px; }
-    .asset .name { font-size: 10px; max-width: 100px; }
-
-    .price { font-size: 15px; }
-    .pct { font-size: 12px; padding: 4px 8px; min-width: 70px; }
-
-    .del { padding: 8px 10px; font-size: 13px; min-height: 38px; min-width: 40px; }
-
-    /* Hide trash column header text on mobile, keep button */
-    thead th:last-child::before { content: ""; }
-  }
-
-  /* Very small phones */
-  @media (max-width: 380px) {
-    .brand-right { display: none; }
-    .asset .name { display: none; }
-    tbody td { padding: 12px 6px; }
-    .pct { min-width: 60px; padding: 3px 6px; font-size: 11px; }
+    .footer { font-size: 9px; }
   }
 </style>
 </head>
@@ -423,500 +292,166 @@
 <div class="glow tl"></div>
 <div class="glow br"></div>
 
-<div class="app">
+<main class="page">
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="orb"></div>
-      <div><div class="name">WORLD<span>VEST</span></div></div>
-    </div>
-    <div class="top-stats">
-      <div class="stat"><span>FEED</span><b id="feed-status" class="live">LIVE</b></div>
-      <div class="stat"><span>SYMBOLS</span><b id="stat-symbols">0</b></div>
-      <div class="stat"><span>LAST SYNC</span><b id="stat-sync">—</b></div>
-    </div>
-    <div class="brand brand-right"><div class="name">WATCH<span>LIST</span></div></div>
-  </header>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="orb"></div>
+    <h1>WORLD<span>VEST</span></h1>
+    <div class="slogan">Global Investing, Redefined</div>
+  </section>
 
-  <aside class="chat">
-    <div class="panel-head">
-      <span class="tag">CHAT BOARD</span>
-      <span id="chat-count">0 MSG</span>
+  <!-- NEWS -->
+  <section class="news">
+    <div class="news-head">
+      <span class="tag">Today's Markets</span>
+      <span class="updated" id="news-updated">—</span>
     </div>
-    <div class="messages" id="messages"></div>
-    <div class="composer">
-      <input id="username" placeholder="Name" maxlength="24" />
-      <div class="row">
-        <input id="chat-input" placeholder="Message" maxlength="500"
-               onkeypress="if(event.key==='Enter') sendMessage()" />
-        <button class="btn" onclick="sendMessage()">SEND</button>
-      </div>
+    <div class="news-list" id="news-list">
+      <div class="news-loading">Loading market headlines…</div>
     </div>
-  </aside>
+  </section>
 
-  <main class="main">
-    <div class="toolbar">
-      <div class="search-wrap">
-        <i class="fa-solid fa-magnifying-glass icon"></i>
-        <input id="search" placeholder="search · stocks · crypto"
-               onkeyup="handleSearchInput()" onfocus="handleSearchInput()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-        <div id="suggestions" class="hidden"></div>
-      </div>
-    </div>
+  <!-- GATE -->
+  <section class="gate-section">
+    <div class="label">Members Access</div>
+    <form class="gate-form" id="gate-form" onsubmit="return submitGate(event)" autocomplete="off">
+      <input type="password" id="password" placeholder="Enter access code"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <button type="submit" class="enter-btn">
+        Enter Watchlist <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+    <div class="gate-error" id="gate-error">&nbsp;</div>
+  </section>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Asset</th>
-            <th>Price</th>
-            <th>1D %</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="watchlist-body"></tbody>
-      </table>
-      <div id="empty-state" class="empty hidden">
-        <h3>NO ASSETS TRACKED</h3>
-        <p>Search a ticker above and pick one to start tracking.</p>
-      </div>
-    </div>
-  </main>
-</div>
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>© WorldVest</span>
+    <span>2026</span>
+  </footer>
+
+</main>
 
 <script>
   // ============ CONFIG ============
-  const firebaseConfig = {
-    apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
-    authDomain: "watchlist-d9ade.firebaseapp.com",
-    projectId: "watchlist-d9ade",
-    storageBucket: "watchlist-d9ade.firebasestorage.app",
-    messagingSenderId: "927853955548",
-    appId: "1:927853955548:web:dedd485e291d3804542719",
-    measurementId: "G-9QNQ8ZVLSR"
-  };
+  // Finnhub key for news (public-side use; same key already in your watchlist).
   const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";
-  const STALE_THRESHOLD_MS = 2 * 60 * 1000; // mark feed stale if no update in 2 min
-  const RECOVERY_INTERVAL_MS = 60 * 1000;    // every 60s, force re-read prices
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  // Password gate. The check uses a SHA-256 hash so the plain-text password
+  // is NOT visible in this file's source.
+  //
+  // To set/change the password:
+  //   1. Open browser console on this page and run:
+  //        await sha256("YOUR_PASSWORD_HERE")
+  //   2. Copy the resulting hex string
+  //   3. Paste it as the value of PASSWORD_HASH below
+  //
+  // Default placeholder hash below = the word "changeme" (so the page still
+  // works on first deploy). Replace it with your own hash before going live.
+  const PASSWORD_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 
-  let watchlist = {};
-  let prices = {};
-  let chatCount = 0;
+  // localStorage key for "remember me"
+  const UNLOCK_KEY = "worldvest_unlocked";
 
-  function isCrypto(symbol) {
-    return symbol.startsWith('CG:') || symbol.includes(':');
+  // ============ AUTO-UNLOCK ============
+  // If the user has unlocked before, send them straight through.
+  if (localStorage.getItem(UNLOCK_KEY) === "true") {
+    // Replace, not push, so back-button doesn't bring them back to the gate.
+    window.location.replace("watchlist.html");
   }
-  function prettySymbol(symbol, fallbackName) {
-    if (fallbackName) return fallbackName;
-    if (symbol.startsWith('CG:')) return symbol.slice(3).toUpperCase();
-    if (symbol.includes(':')) {
-      const pair = symbol.split(':')[1] || '';
-      return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
+
+  // ============ HELPERS ============
+  async function sha256(text) {
+    const buf = new TextEncoder().encode(text);
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Expose for one-time password setup from console
+  window.sha256 = sha256;
+
+  // ============ GATE ============
+  async function submitGate(e) {
+    e.preventDefault();
+    const input = document.getElementById('password');
+    const form = document.getElementById('gate-form');
+    const errorEl = document.getElementById('gate-error');
+    const value = input.value.trim();
+    if (!value) return false;
+
+    const hash = await sha256(value);
+    if (hash === PASSWORD_HASH) {
+      localStorage.setItem(UNLOCK_KEY, "true");
+      window.location.href = "watchlist.html";
+    } else {
+      form.classList.add('shake', 'error');
+      errorEl.textContent = "Incorrect access code";
+      input.value = '';
+      setTimeout(() => {
+        form.classList.remove('shake', 'error');
+        errorEl.innerHTML = '&nbsp;';
+      }, 2000);
     }
-    return symbol;
+    return false;
   }
 
-  const fmtPrice = v => {
-    if (v == null || isNaN(v)) return '—';
-    const n = Number(v);
-    const decimals = n < 1 ? 6 : 2;
-    return n.toLocaleString(undefined, {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
-  };
-  const fmtPct = v => {
-    if (v == null || isNaN(v)) return '—';
-    const n = Number(v);
-    return (n>=0?'+':'') + n.toFixed(2) + '%';
-  };
-  const dirClass = v => {
-    if (v == null || isNaN(v)) return 'flat';
-    if (v > 0.001) return 'up';
-    if (v < -0.001) return 'down';
-    return 'flat';
-  };
-  const ago = ts => {
-    if (!ts) return '—';
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return s + 's ago';
-    if (s < 3600) return Math.floor(s/60) + 'm ago';
-    return Math.floor(s/3600) + 'h ago';
-  };
-  const safe = s => String(s||'').replace(/[<>&"']/g, c => ({
-    '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'
-  }[c]));
-
-  function sortedSymbols() {
-    return Object.keys(watchlist).sort((a,b) => {
-      const oa = watchlist[a].order ?? watchlist[a].addedAt ?? 0;
-      const ob = watchlist[b].order ?? watchlist[b].addedAt ?? 0;
-      return oa - ob;
-    });
-  }
-
-  // ============ FRESHNESS ============
-  function mostRecentUpdate() {
-    let mostRecent = 0;
-    Object.values(prices).forEach(p => {
-      if (p && p.updatedAt && p.updatedAt > mostRecent) mostRecent = p.updatedAt;
-    });
-    return mostRecent;
-  }
-
-  function updateFeedStatus() {
-    const ts = mostRecentUpdate();
-    const syncEl = document.getElementById('stat-sync');
-    const feedEl = document.getElementById('feed-status');
-    if (syncEl) syncEl.textContent = ts ? ago(ts) : '—';
-    if (feedEl) {
-      const stale = ts && (Date.now() - ts) > STALE_THRESHOLD_MS;
-      if (stale) {
-        feedEl.classList.add('stale');
-        feedEl.textContent = 'STALE';
-      } else {
-        feedEl.classList.remove('stale');
-        feedEl.textContent = 'LIVE';
+  // ============ NEWS ============
+  // Finnhub /news?category=general — free tier, no auth headaches
+  async function loadNews() {
+    const listEl = document.getElementById('news-list');
+    const updatedEl = document.getElementById('news-updated');
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = await res.json();
+      if (!Array.isArray(items) || items.length === 0) {
+        listEl.innerHTML = '<div class="news-error">No headlines available right now.</div>';
+        return;
       }
-    }
-  }
 
-  // ============ RENDER ============
-  function renderWatchlist() {
-    const tbody = document.getElementById('watchlist-body');
-    const empty = document.getElementById('empty-state');
-    const symbols = sortedSymbols();
+      // Pick the 5 most recent items that have headlines
+      const top = items
+        .filter(it => it.headline && it.headline.trim().length > 0)
+        .slice(0, 5);
 
-    document.getElementById('stat-symbols').textContent = symbols.length;
+      const safe = s => String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+      const ago = sec => {
+        if (!sec) return '';
+        const diff = Math.floor(Date.now()/1000 - sec);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+        return Math.floor(diff/86400) + 'd ago';
+      };
 
-    if (symbols.length === 0) {
-      tbody.innerHTML = '';
-      empty.classList.remove('hidden');
-      return;
-    }
-    empty.classList.add('hidden');
-
-    updateFeedStatus();
-
-    const html = symbols.map(sym => {
-      const w = watchlist[sym] || {};
-      const p = prices[sym] || {};
-      const crypto = isCrypto(sym);
-      const display = prettySymbol(sym, w.tickerLabel);
-
-      const logo = w.logoUrl
-        ? `<img class="logo" src="${safe(w.logoUrl)}" onerror="this.outerHTML='<div class=\\'logo-fallback ${crypto?'crypto':''}\\'>${safe(display).slice(0,4)}</div>'" />`
-        : `<div class="logo-fallback ${crypto ? 'crypto' : ''}">${safe(display).slice(0,4)}</div>`;
-
-      return `
-        <tr data-sym="${safe(sym)}" draggable="true">
-          <td>
-            <div class="asset">
-              <span class="drag-handle" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
-              ${logo}
-              <div class="meta">
-                <div class="sym ${crypto ? 'crypto' : ''}">${safe(display)}</div>
-                ${w.name ? `<div class="name">${safe(w.name)}</div>` : ''}
-              </div>
+      listEl.innerHTML = top.map((it, i) => `
+        <a class="news-item" href="${safe(it.url)}" target="_blank" rel="noopener noreferrer">
+          <div class="num">${String(i+1).padStart(2,'0')}</div>
+          <div class="body">
+            <div class="headline">${safe(it.headline)}</div>
+            <div class="meta">
+              <span class="source">${safe(it.source || 'Source')}</span>
+              <span class="dot"></span>
+              <span>${ago(it.datetime)}</span>
             </div>
-          </td>
-          <td><span class="price">${fmtPrice(p.price)}</span></td>
-          <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
-          <td><button class="del" onclick="deleteTicker('${safe(sym)}')"><i class="fa-solid fa-trash"></i></button></td>
-        </tr>`;
-    }).join('');
+          </div>
+        </a>
+      `).join('');
 
-    tbody.innerHTML = html;
-    attachDragHandlers();
-  }
-
-  function updatePricesInPlace() {
-    const tbody = document.getElementById('watchlist-body');
-    if (!tbody) return false;
-    const rows = tbody.querySelectorAll('tr[data-sym]');
-    if (rows.length !== Object.keys(watchlist).length) return false;
-    for (const row of rows) {
-      const sym = row.dataset.sym;
-      const p = prices[sym] || {};
-      const priceEl = row.querySelector('.price');
-      const pctEl = row.querySelector('.pct');
-      if (priceEl) priceEl.textContent = fmtPrice(p.price);
-      if (pctEl) {
-        pctEl.textContent = fmtPct(p.percent);
-        pctEl.className = 'pct ' + dirClass(p.percent);
-      }
-    }
-    updateFeedStatus();
-    return true;
-  }
-
-  // ============ DRAG & DROP (desktop only) ============
-  let dragSym = null;
-  function attachDragHandlers() {
-    if (window.matchMedia('(max-width: 768px)').matches) return; // skip on mobile
-    const rows = document.querySelectorAll('#watchlist-body tr');
-    rows.forEach(row => {
-      row.addEventListener('dragstart', e => {
-        dragSym = row.dataset.sym;
-        row.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', dragSym); } catch (_) {}
-      });
-      row.addEventListener('dragend', () => {
-        row.classList.remove('dragging');
-        document.querySelectorAll('#watchlist-body tr').forEach(r => {
-          r.classList.remove('drag-over-top','drag-over-bottom');
-        });
-        dragSym = null;
-      });
-      row.addEventListener('dragover', e => {
-        e.preventDefault();
-        if (!dragSym || row.dataset.sym === dragSym) return;
-        const rect = row.getBoundingClientRect();
-        const before = (e.clientY - rect.top) < rect.height / 2;
-        row.classList.toggle('drag-over-top', before);
-        row.classList.toggle('drag-over-bottom', !before);
-      });
-      row.addEventListener('dragleave', () => {
-        row.classList.remove('drag-over-top','drag-over-bottom');
-      });
-      row.addEventListener('drop', e => {
-        e.preventDefault();
-        if (!dragSym || row.dataset.sym === dragSym) return;
-        const targetSym = row.dataset.sym;
-        const rect = row.getBoundingClientRect();
-        const before = (e.clientY - rect.top) < rect.height / 2;
-        reorderSymbols(dragSym, targetSym, before);
-      });
-    });
-  }
-  function reorderSymbols(movedSym, targetSym, dropBefore) {
-    const order = sortedSymbols();
-    const fromIdx = order.indexOf(movedSym);
-    if (fromIdx === -1) return;
-    order.splice(fromIdx, 1);
-    let toIdx = order.indexOf(targetSym);
-    if (toIdx === -1) return;
-    if (!dropBefore) toIdx += 1;
-    order.splice(toIdx, 0, movedSym);
-    const updates = {};
-    order.forEach((sym, i) => {
-      updates[`watchlist/${sym}/order`] = (i + 1) * 1000;
-    });
-    db.ref().update(updates);
-  }
-
-  // ============ FIREBASE LISTENERS ============
-  db.ref('watchlist').on('value', snap => {
-    watchlist = snap.val() || {};
-    renderWatchlist();
-  });
-  db.ref('prices').on('value', snap => {
-    prices = snap.val() || {};
-    if (!updatePricesInPlace()) renderWatchlist();
-  });
-
-  // RECOVERY: If Firebase listener stalls (browser throttling, network blip,
-  // tab in background too long), force a re-read every 60s. This guarantees
-  // we always converge on the latest data even if the .on() listener has
-  // gone silent for any reason.
-  setInterval(async () => {
-    try {
-      const snap = await db.ref('prices').once('value');
-      const fresh = snap.val() || {};
-      // Only update if something actually changed
-      const freshTs = Object.values(fresh).reduce((m, p) => Math.max(m, p?.updatedAt || 0), 0);
-      const currentTs = mostRecentUpdate();
-      if (freshTs > currentTs) {
-        prices = fresh;
-        if (!updatePricesInPlace()) renderWatchlist();
-      } else {
-        updateFeedStatus(); // still update the staleness indicator
-      }
+      const now = new Date();
+      updatedEl.textContent = 'Updated ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     } catch (e) {
-      console.warn('recovery read failed:', e);
-    }
-  }, RECOVERY_INTERVAL_MS);
-
-  // Also tick the "X seconds ago" display every 10s for accuracy
-  setInterval(updateFeedStatus, 10000);
-
-  // When the page becomes visible again (after being in a background tab),
-  // immediately re-fetch in case the listener was throttled.
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible') {
-      try {
-        const [wlSnap, prSnap] = await Promise.all([
-          db.ref('watchlist').once('value'),
-          db.ref('prices').once('value'),
-        ]);
-        watchlist = wlSnap.val() || {};
-        prices = prSnap.val() || {};
-        renderWatchlist();
-      } catch (e) {
-        console.warn('visibility refetch failed:', e);
-      }
-    }
-  });
-
-  // ============ CHAT ============
-  db.ref('chat').limitToLast(100).on('child_added', snap => {
-    const m = snap.val(); const key = snap.key;
-    if (!m) return;
-    const time = new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    const div = document.createElement('div');
-    div.className = 'msg'; div.dataset.key = key;
-    div.innerHTML = `
-      <button class="x" title="Delete message" onclick="deleteMessage('${key}')">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="h">
-        <span class="who">${safe(m.name) || 'ANON'}</span>
-        <span>${time}</span>
-      </div>
-      <div class="body">${safe(m.message)}</div>`;
-    const box = document.getElementById('messages');
-    box.appendChild(div); box.scrollTop = box.scrollHeight;
-    chatCount++;
-    document.getElementById('chat-count').textContent = chatCount + ' MSG';
-  });
-  db.ref('chat').on('child_removed', snap => {
-    const node = document.querySelector(`.msg[data-key="${snap.key}"]`);
-    if (node) node.remove();
-    chatCount = Math.max(0, chatCount - 1);
-    document.getElementById('chat-count').textContent = chatCount + ' MSG';
-  });
-
-  // ============ ACTIONS ============
-  function addToWatchlist(symbol, meta) {
-    if (!symbol || watchlist[symbol]) return;
-    const existing = sortedSymbols();
-    const firstOrder = existing.length
-      ? (watchlist[existing[0]].order ?? 1000) : 1000;
-    db.ref('watchlist/' + symbol).set({
-      symbol,
-      tickerLabel: meta.tickerLabel || symbol,
-      name: meta.name || '',
-      logoUrl: meta.logoUrl || '',
-      addedAt: Date.now(),
-      order: firstOrder - 1000,
-    });
-    document.getElementById('search').value = '';
-    document.getElementById('suggestions').classList.add('hidden');
-  }
-
-  function deleteTicker(symbol) {
-    const display = prettySymbol(symbol, watchlist[symbol]?.tickerLabel);
-    if (!confirm(`Remove ${display} from watchlist?`)) return;
-    db.ref('watchlist/' + symbol).remove();
-    db.ref('prices/' + symbol).remove();
-  }
-
-  function deleteMessage(key) { db.ref('chat/' + key).remove(); }
-
-  function sendMessage() {
-    const input = document.getElementById('chat-input');
-    const nameInput = document.getElementById('username');
-    const msg = input.value.trim();
-    if (!msg) return;
-    db.ref('chat').push({
-      name: (nameInput.value.trim() || 'ANON').slice(0,24),
-      message: msg.slice(0,500),
-      timestamp: Date.now()
-    });
-    input.value = '';
-  }
-
-  // ============ SEARCH ============
-  let searchTimer = null;
-  function handleSearchInput() {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(doSearch, 250);
-  }
-
-  async function searchStocks(q) {
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${FINNHUB_KEY}`);
-      const data = await res.json();
-      return (data.result || [])
-        .filter(it => it.type && (it.type.includes('Common') || it.type === 'ETP' || it.type === 'Equity'))
-        .slice(0, 8)
-        .map(it => ({
-          symbol: it.symbol,
-          tickerLabel: it.symbol,
-          name: it.description || '',
-          logoUrl: `https://logos.allinvestview.com/ticker/${encodeURIComponent(it.symbol)}.png`,
-        }));
-    } catch (e) { return []; }
-  }
-
-  async function searchCrypto(q) {
-    try {
-      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      return (data.coins || []).slice(0, 8).map(c => ({
-        symbol: 'CG:' + c.id,
-        tickerLabel: (c.symbol || '').toUpperCase(),
-        name: c.name,
-        logoUrl: c.thumb || c.large || '',
-      }));
-    } catch (e) { return []; }
-  }
-
-  async function doSearch() {
-    const q = document.getElementById('search').value.trim();
-    const box = document.getElementById('suggestions');
-    if (q.length < 1) { box.classList.add('hidden'); return; }
-
-    const [stocks, crypto] = await Promise.all([searchStocks(q), searchCrypto(q)]);
-
-    if (stocks.length === 0 && crypto.length === 0) {
-      box.classList.add('hidden'); return;
-    }
-
-    let html = '';
-    if (stocks.length) {
-      html += `<div class="sug-section">STOCKS</div>`;
-      html += stocks.map(s => {
-        const meta = encodeURIComponent(JSON.stringify(s));
-        return `<div class="sug" onclick="pickResult('${meta}')">
-          <span class="sym">${safe(s.symbol)}</span>
-          <span class="desc">${safe(s.name)}</span>
-        </div>`;
-      }).join('');
-    }
-    if (crypto.length) {
-      html += `<div class="sug-section">CRYPTO</div>`;
-      html += crypto.map(c => {
-        const meta = encodeURIComponent(JSON.stringify(c));
-        const logo = c.logoUrl
-          ? `<img class="logo" src="${safe(c.logoUrl)}" onerror="this.style.display='none'" />`
-          : '';
-        return `<div class="sug crypto" onclick="pickResult('${meta}')">
-          ${logo}
-          <span class="sym">${safe(c.tickerLabel)}</span>
-          <span class="desc">${safe(c.name)}</span>
-          <span class="pill">CRYPTO</span>
-        </div>`;
-      }).join('');
-    }
-    box.innerHTML = html;
-    box.classList.remove('hidden');
-  }
-
-  function pickResult(encodedMeta) {
-    try {
-      const meta = JSON.parse(decodeURIComponent(encodedMeta));
-      addToWatchlist(meta.symbol, meta);
-    } catch (e) {
-      console.warn('pickResult failed:', e);
+      console.warn('news load failed:', e);
+      listEl.innerHTML = '<div class="news-error">Couldn\'t load headlines. Try refreshing.</div>';
     }
   }
 
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.search-wrap')) {
-      document.getElementById('suggestions').classList.add('hidden');
-    }
+  loadNews();
+  // Refresh news every 5 minutes if the tab stays open
+  setInterval(loadNews, 5 * 60 * 1000);
+  // And refresh on tab refocus
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadNews();
   });
 </script>
 </body>

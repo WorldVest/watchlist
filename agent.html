@@ -359,19 +359,13 @@
   }
 
   // ============ CONFIG ============
-  // Paste your Gemini API key here. The key is restricted to worldvest.xyz
-  // via Google Cloud Console "Application restrictions → Websites", so even
-  // if it leaks publicly, only requests from your domain will work.
-  const GEMINI_API_KEY = "AIzaSyBN2oNDxL0EsqcqG5PAj4wnaQzFzYhz1DA";
-  // Using gemini-2.5-flash (replaces deprecated 2.0-flash, retiring June 2026).
-  // Free-tier limits: ~10 RPM, ~250 RPD. We add throttling below to stay under.
-  const GEMINI_MODEL = "gemini-2.5-flash";
-  // Minimum spacing between Gemini calls to avoid bursting the per-minute limit.
-  // 7s between calls = max ~8 calls/min, comfortably under the 10 RPM cap even
-  // if multiple tool round-trips happen back-to-back.
-  const MIN_CALL_SPACING_MS = 7000;
-
-  const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";
+  // The agent runs server-side on Render. The browser just sends user
+  // messages here and gets back the agent's reply. The Gemini API key
+  // never touches the browser.
+  //
+  // Replace this with your Render service URL (the one you visit to keep
+  // it warm with UptimeRobot — same URL).
+  const AGENT_URL = "https://worldvest-updater.onrender.com/agent";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
@@ -388,312 +382,50 @@
 
   const CONVO_KEY = "worldvest_agent_convo_v1";
 
-  // ============ TOOL DEFINITIONS ============
-  // These are exposed to Gemini as functions it can call. Each one corresponds
-  // to a JS function below that actually fetches data.
-  const TOOLS = [{
-    functionDeclarations: [
-      {
-        name: "get_watchlist",
-        description: "Get the list of all stocks and crypto currently being tracked on the WorldVest watchlist, including their current price and 1-day percent change.",
-        parameters: { type: "OBJECT", properties: {} }
-      },
-      {
-        name: "get_price",
-        description: "Get the current price and 1-day percent change for a specific stock ticker. Use for stocks already on the watchlist or any other US stock symbol.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            symbol: { type: "STRING", description: "The stock ticker symbol, e.g. AAPL, NVDA, TSLA" }
-          },
-          required: ["symbol"]
-        }
-      },
-      {
-        name: "get_market_news",
-        description: "Get the latest general market news headlines from major financial sources.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            count: { type: "NUMBER", description: "Number of headlines to return (default 5, max 10)" }
-          }
-        }
-      },
-      {
-        name: "get_stock_news",
-        description: "Get the latest news headlines for a specific stock ticker.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            symbol: { type: "STRING", description: "The stock ticker symbol" },
-            count: { type: "NUMBER", description: "Number of headlines to return (default 3, max 5)" }
-          },
-          required: ["symbol"]
-        }
-      }
-    ]
-  }];
-
-  // ============ TOOL IMPLEMENTATIONS ============
-  function isCrypto(symbol) {
-    return symbol.startsWith('CG:') || symbol.includes(':');
-  }
-  function prettySym(symbol) {
-    if (symbol.startsWith('CG:')) return symbol.slice(3).toUpperCase();
-    if (symbol.includes(':')) {
-      const pair = symbol.split(':')[1] || '';
-      return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
-    }
-    return symbol;
-  }
-
-  async function tool_get_watchlist() {
-    const [wlSnap, prSnap] = await Promise.all([
-      db.ref('watchlist').once('value'),
-      db.ref('prices').once('value'),
-    ]);
-    const watchlist = wlSnap.val() || {};
-    const prices = prSnap.val() || {};
-    const items = Object.keys(watchlist).map(sym => {
-      const w = watchlist[sym] || {};
-      const p = prices[sym] || {};
-      return {
-        symbol: prettySym(sym),
-        name: w.name || '',
-        type: isCrypto(sym) ? 'crypto' : 'stock',
-        price: p.price ?? null,
-        percent_change_1d: p.percent ?? null,
-      };
-    });
-    return { count: items.length, items };
-  }
-
-  async function tool_get_price({ symbol }) {
-    if (!symbol) return { error: "symbol required" };
-    const sym = symbol.toUpperCase();
-    // Try Firebase first (already-tracked symbol)
-    const snap = await db.ref('prices/' + sym).once('value');
-    const cached = snap.val();
-    if (cached && cached.price) {
-      return {
-        symbol: sym,
-        price: cached.price,
-        percent_change_1d: cached.percent ?? null,
-        source: "watchlist"
-      };
-    }
-    // Fall back to a fresh Finnhub /quote (only works for stocks)
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${FINNHUB_KEY}`);
-      const q = await res.json();
-      if (!q || (q.c === 0 && q.pc === 0)) {
-        return { error: `No data found for ${sym}. It may not be a valid US stock ticker.` };
-      }
-      return {
-        symbol: sym,
-        price: Number(q.c),
-        percent_change_1d: Number(q.dp),
-        prev_close: Number(q.pc),
-        day_high: Number(q.h),
-        day_low: Number(q.l),
-        source: "finnhub_live"
-      };
-    } catch (e) {
-      return { error: "Failed to fetch price: " + e.message };
-    }
-  }
-
-  async function tool_get_market_news({ count = 5 } = {}) {
-    const n = Math.max(1, Math.min(10, Number(count) || 5));
-    try {
-      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
-      const items = await res.json();
-      const top = (items || [])
-        .filter(it => it.headline)
-        .slice(0, n)
-        .map(it => ({
-          headline: it.headline,
-          source: it.source,
-          summary: (it.summary || '').slice(0, 300),
-          published_minutes_ago: it.datetime ? Math.floor((Date.now()/1000 - it.datetime) / 60) : null,
-          url: it.url
-        }));
-      return { count: top.length, headlines: top };
-    } catch (e) {
-      return { error: "Failed to fetch news: " + e.message };
-    }
-  }
-
-  async function tool_get_stock_news({ symbol, count = 3 } = {}) {
-    if (!symbol) return { error: "symbol required" };
-    const n = Math.max(1, Math.min(5, Number(count) || 3));
-    const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const fmt = d => d.toISOString().slice(0,10);
-    try {
-      const url = `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${fmt(weekAgo)}&to=${fmt(today)}&token=${FINNHUB_KEY}`;
-      const res = await fetch(url);
-      const items = await res.json();
-      const top = (items || [])
-        .filter(it => it.headline)
-        .sort((a,b) => (b.datetime||0) - (a.datetime||0))
-        .slice(0, n)
-        .map(it => ({
-          headline: it.headline,
-          source: it.source,
-          summary: (it.summary || '').slice(0, 300),
-          published_hours_ago: it.datetime ? Math.floor((Date.now()/1000 - it.datetime) / 3600) : null,
-          url: it.url
-        }));
-      return { symbol, count: top.length, headlines: top };
-    } catch (e) {
-      return { error: "Failed to fetch stock news: " + e.message };
-    }
-  }
-
-  const TOOL_FUNCTIONS = {
-    get_watchlist: tool_get_watchlist,
-    get_price: tool_get_price,
-    get_market_news: tool_get_market_news,
-    get_stock_news: tool_get_stock_news,
-  };
-
-  // ============ GEMINI CALL ============
-  const SYSTEM_PROMPT = `You are WORLDVEST AGENT, a friendly and knowledgeable finance assistant for a small group of friends and family who track stocks and crypto together.
-
-Your style:
-- Conversational and direct, not academic
-- Use plain English; explain jargon when it comes up
-- Concise by default — one or two paragraphs unless they ask for depth
-- Use real numbers from your tools, never make up prices, percentages, or stats
-- Reference the user's actual watchlist when relevant ("you're tracking AAPL...")
-
-Hard rules:
-- NEVER give specific buy/sell advice. If asked "should I buy X?", explain factors to consider but don't recommend an action.
-- If you don't have data, say so. Don't guess or fabricate.
-- Use your tools to fetch live data — don't rely on memory for current prices, breaking news, or recent events.
-- If a question isn't finance/markets-related, you can still answer it briefly and steer back to markets.
-
-When using tools:
-- For "how's my watchlist doing", call get_watchlist
-- For "what's [TICKER] at" or "how's NVDA today", call get_price
-- For "what's happening in markets" or "any news today", call get_market_news
-- For news about a specific company, call get_stock_news
-
-Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
-
-  // Track last call time so we can space out requests
-  let lastCallAt = 0;
-
-  async function callGemini(messages) {
-    // Enforce minimum spacing between calls — protects against the per-minute
-    // rate limit when tool round-trips fire several calls in a row.
-    const sinceLast = Date.now() - lastCallAt;
-    if (sinceLast < MIN_CALL_SPACING_MS) {
-      await new Promise(r => setTimeout(r, MIN_CALL_SPACING_MS - sinceLast));
-    }
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const body = {
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: messages,
-      tools: TOOLS,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1024,
-      }
-    };
-
-    // Up to 3 attempts, with backoff on 429 (rate-limited)
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      lastCallAt = Date.now();
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (res.status === 429) {
-        // Per-minute limit hit. Wait progressively longer and retry.
-        const waitMs = attempt * 15000; // 15s, then 30s, then 45s
-        if (attempt < 3) {
-          console.warn(`Gemini 429 (attempt ${attempt}/3), waiting ${waitMs}ms`);
-          await new Promise(r => setTimeout(r, waitMs));
-          continue;
-        }
-        throw new Error("Rate limit hit. The free Gemini tier allows ~10 requests per minute. Try again in a minute.");
-      }
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
-      }
-      return await res.json();
-    }
-    throw new Error("Gemini call failed after retries");
-  }
-
-  // ============ AGENT TURN HANDLER ============
-  // Loops: send to Gemini, if it asks for tools, run them and send results back, repeat.
+  // ============ AGENT TURN — calls Render proxy ============
+  // We send the conversation history + new user message; the server runs
+  // Gemini, executes any tools, and returns the final text + tool list.
   async function agentTurn(userText, onUpdate) {
-    // Append user message to conversation history
     convo.push({ role: 'user', parts: [{ text: userText }] });
 
-    let toolCallsThisTurn = [];
-    let safetyLoopCounter = 0;
+    // Build a clean history for the server: only user/model text turns,
+    // never tool plumbing. Drop the message we just added (the server
+    // takes that as a separate `message` field).
+    const history = convo.slice(0, -1)
+      .filter(m => {
+        const hasFnCall = m.parts?.some(p => p.functionCall);
+        const hasFnResp = m.parts?.some(p => p.functionResponse);
+        return !hasFnCall && !hasFnResp;
+      })
+      .map(m => ({
+        role: m.role,
+        parts: (m.parts || []).filter(p => p.text).map(p => ({ text: p.text })),
+      }))
+      .filter(m => m.parts.length > 0);
 
-    while (safetyLoopCounter++ < 6) {
-      const response = await callGemini(convo);
-      const candidate = response.candidates?.[0];
-      if (!candidate) throw new Error('No candidate in Gemini response');
+    const res = await fetch(AGENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history, message: userText }),
+    });
 
-      const parts = candidate.content?.parts || [];
-
-      // Check if model wants to call tools
-      const functionCalls = parts.filter(p => p.functionCall);
-      if (functionCalls.length > 0) {
-        // Save the model's tool-call message to history
-        convo.push({ role: 'model', parts });
-
-        // Execute each tool, build response parts
-        const responseParts = [];
-        for (const p of functionCalls) {
-          const fnName = p.functionCall.name;
-          const fnArgs = p.functionCall.args || {};
-          toolCallsThisTurn.push(fnName);
-          onUpdate({ tool: fnName });
-          let result;
-          try {
-            const fn = TOOL_FUNCTIONS[fnName];
-            if (!fn) {
-              result = { error: `Unknown function: ${fnName}` };
-            } else {
-              result = await fn(fnArgs);
-            }
-          } catch (e) {
-            result = { error: e.message };
-          }
-          responseParts.push({
-            functionResponse: { name: fnName, response: { result } }
-          });
-        }
-        // Send tool results back to model
-        convo.push({ role: 'user', parts: responseParts });
-        // Loop: model now has the data, generate again
-        continue;
-      }
-
-      // No tool calls — model gave a final text answer
-      const text = parts.map(p => p.text || '').join('').trim();
-      if (text) {
-        convo.push({ role: 'model', parts: [{ text }] });
-        return { text, tools: toolCallsThisTurn };
-      } else {
-        return { text: '(No response from agent.)', tools: toolCallsThisTurn };
-      }
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json()).error || ''; } catch (_) {}
+      const err = new Error(`Server ${res.status}${detail ? ': ' + detail : ''}`);
+      err.status = res.status;
+      throw err;
     }
 
-    return { text: '(Agent stopped after too many tool calls. Try a simpler question.)', tools: toolCallsThisTurn };
+    const data = await res.json();
+    const tools = data.tools || [];
+    if (tools.length && onUpdate) {
+      // Show all tools used in one go so the typing indicator reflects what happened
+      onUpdate({ tools });
+    }
+    const text = data.text || '(No response from agent.)';
+    convo.push({ role: 'model', parts: [{ text }] });
+    return { text, tools };
   }
 
   // ============ STATE & PERSISTENCE ============
@@ -804,11 +536,6 @@ Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
     const text = inputEl.value.trim();
     if (!text) return;
 
-    if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_KEY_HERE") {
-      alert("Gemini API key isn't set yet. Edit agent.html and paste your key.");
-      return;
-    }
-
     sending = true;
     document.getElementById('send-btn').disabled = true;
     inputEl.value = '';
@@ -820,14 +547,11 @@ Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
     showTyping([]);
 
     // Pop the user message we just added — agentTurn will re-add it.
-    // (It manages its own conversation state including tool round-trips.)
     convo.pop();
 
-    let collectedTools = [];
     try {
-      const result = await agentTurn(text, ({ tool }) => {
-        collectedTools.push(tool);
-        showTyping(collectedTools);
+      await agentTurn(text, ({ tools }) => {
+        showTyping(tools || []);
       });
       hideTyping();
       saveConvo();
@@ -836,8 +560,12 @@ Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
       hideTyping();
       console.error(e);
       let friendly = `Sorry, I hit an error: ${e.message}`;
-      if (e.message.includes('Rate limit') || e.message.includes('429') || e.message.includes('quota')) {
-        friendly = "I'm being rate-limited by the free Gemini tier (about 10 requests per minute, 250 per day). Wait a minute and try again. If this happens often, the daily limit resets at midnight Pacific time.";
+      if (e.status === 429 || /rate|quota|429/i.test(e.message)) {
+        friendly = "I'm being rate-limited. The free Gemini tier allows about 10 requests per minute and 250 per day. Wait a minute and try again. Daily limit resets at midnight Pacific time.";
+      } else if (e.status === 503 || /not configured/i.test(e.message)) {
+        friendly = "The agent isn't configured yet. The Gemini API key needs to be set in the Render service environment variables.";
+      } else if (/failed to fetch|network/i.test(e.message)) {
+        friendly = "Couldn't reach the agent server. The Render service might be cold-starting (gives it ~30 seconds), or there's a network issue. Try again shortly.";
       }
       convo.push({ role: 'model', parts: [{ text: friendly }] });
       saveConvo();

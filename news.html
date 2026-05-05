@@ -322,9 +322,6 @@
   }
 
   function renderItem(it, idx, tickerLabel) {
-    const thumb = it.image && it.image.startsWith('http')
-      ? `<img class="thumb" src="${safe(it.image)}" alt="" loading="lazy" onerror="this.classList.add('hidden')" />`
-      : '';
     const tag = tickerLabel
       ? `<div class="ticker-tag stock">${safe(tickerLabel)}</div>`
       : '';
@@ -334,7 +331,6 @@
     return `
       <a class="news-item" href="${safe(it.url)}" target="_blank" rel="noopener noreferrer">
         <div class="num">${String(idx+1).padStart(2,'0')}</div>
-        ${thumb}
         <div class="body">
           ${tag}
           <div class="headline">${safe(it.headline)}</div>

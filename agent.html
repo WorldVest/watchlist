@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05070d" />
+<title>WORLDVEST · AGENTCHAT</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<style>
+  :root {
+    --bg-0: #05070d; --bg-1: #0a0e1a;
+    --line: #1a2238; --line-bright: #2a3656;
+    --text: #d6e1ff; --text-dim: #8a9bc4; --text-faint: #5d6e94;
+    --header: #b8c8ff;
+    --accent: #00ffae; --accent-glow: #00ffae40;
+    --warn: #ff5277; --gold: #f7b955;
+    --agent-purple: #a78bff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; min-height: 100%;
+    -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    background: var(--bg-0); color: var(--text);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px; position: relative;
+    overflow-x: hidden;
+    min-height: 100vh; min-height: 100dvh;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background:
+      linear-gradient(rgba(0,255,174,0.035) 1px, transparent 1px) 0 0 / 100% 44px,
+      linear-gradient(90deg, rgba(0,255,174,0.035) 1px, transparent 1px) 0 0 / 44px 100%;
+    pointer-events: none; z-index: 0; animation: drift 30s linear infinite;
+  }
+  @keyframes drift { from { background-position: 0 0, 0 0; } to { background-position: 0 44px, 44px 0; } }
+  body::after {
+    content: ""; position: fixed; inset: 0;
+    background: repeating-linear-gradient(to bottom,
+      rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+      transparent 1px, transparent 3px);
+    pointer-events: none; mix-blend-mode: overlay; z-index: 1;
+  }
+  .glow {
+    position: fixed; width: 900px; height: 900px; border-radius: 50%;
+    pointer-events: none; z-index: 0; filter: blur(40px);
+  }
+  .glow.tl { top: -300px; left: -300px;
+             background: radial-gradient(circle, rgba(0,255,174,0.10), transparent 60%); }
+  .glow.br { bottom: -400px; right: -300px;
+             background: radial-gradient(circle, rgba(167,139,255,0.08), transparent 60%); }
+
+  /* TOP BAR */
+  .topbar {
+    position: relative; z-index: 2; height: 56px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(5,7,13,0.85); backdrop-filter: blur(8px);
+    display: flex; align-items: center; padding: 0 20px; gap: 22px;
+  }
+  .topbar::after {
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.4;
+  }
+  .brand { display: flex; align-items: center; gap: 12px;
+           font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.18em;
+           text-decoration: none; color: inherit; }
+  .brand .orb {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: radial-gradient(circle at 30% 30%, #00ffae 0%, #00b888 35%, #003c5a 70%, #0a0e1a 100%);
+    box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4);
+    animation: pulseOrb 3s ease-in-out infinite;
+  }
+  @keyframes pulseOrb {
+    0%,100% { box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(255,255,255,0.4); }
+    50%     { box-shadow: 0 0 36px var(--accent-glow), inset 0 0 14px rgba(255,255,255,0.5); }
+  }
+  .brand .name { font-weight: 700; font-size: 18px; }
+  .brand .name span { color: var(--accent); }
+  .brand-right { margin-left: auto; }
+
+  .nav-link {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 16px;
+    letter-spacing: 0.18em; color: var(--text-dim);
+    text-decoration: none; padding: 6px 14px;
+    border: 1px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .nav-link span { color: var(--accent); }
+  .nav-link:hover { color: var(--text); border-color: var(--line-bright); background: rgba(0,255,174,0.04); }
+  .nav-link.active { color: var(--text); border-color: var(--accent); background: rgba(0,255,174,0.06); }
+
+  .lock-btn {
+    background: transparent; border: 1px solid var(--line-bright);
+    color: var(--text-faint); font-size: 12px;
+    padding: 6px 10px; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    margin-left: 12px;
+  }
+  .lock-btn:hover {
+    color: var(--accent); border-color: var(--accent);
+    background: rgba(0,255,174,0.06);
+  }
+
+  /* PAGE LAYOUT */
+  .page {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column;
+    height: calc(100vh - 56px); height: calc(100dvh - 56px);
+    max-width: 900px; margin: 0 auto;
+    padding: 24px 24px 0;
+    width: 100%;
+  }
+
+  .header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+  }
+  .header .label {
+    font-size: 11px; letter-spacing: 0.3em;
+    color: var(--agent-purple);
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header .label::before {
+    content:""; width: 6px; height: 6px;
+    background: var(--agent-purple);
+    box-shadow: 0 0 8px var(--agent-purple);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .header .clear-btn {
+    background: transparent; border: 1px solid var(--line-bright);
+    color: var(--text-faint); font-family: inherit;
+    font-size: 10px; letter-spacing: 0.2em;
+    padding: 6px 12px; cursor: pointer;
+    text-transform: uppercase;
+    transition: color .15s, border-color .15s;
+  }
+  .header .clear-btn:hover { color: var(--warn); border-color: var(--warn); }
+
+  /* CONVERSATION */
+  .convo {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 18px;
+    padding: 4px 4px 18px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent;
+  }
+  .convo::-webkit-scrollbar { width: 6px; }
+  .convo::-webkit-scrollbar-thumb { background: var(--line-bright); border-radius: 3px; }
+
+  .msg {
+    display: flex; gap: 14px;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
+  .msg .avatar {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border: 1px solid var(--line-bright);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .msg.user .avatar { color: var(--accent); border-color: rgba(0,255,174,0.3); }
+  .msg.agent .avatar { color: var(--agent-purple); border-color: rgba(167,139,255,0.3); }
+  .msg .body {
+    flex: 1; min-width: 0;
+    border-left: 2px solid var(--line-bright);
+    padding: 4px 0 4px 14px;
+  }
+  .msg.user .body { border-left-color: rgba(0,255,174,0.3); }
+  .msg.agent .body { border-left-color: rgba(167,139,255,0.3); }
+  .msg .who {
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--text-faint); text-transform: uppercase;
+    margin-bottom: 6px; font-weight: 600;
+  }
+  .msg.user .who { color: var(--accent); }
+  .msg.agent .who { color: var(--agent-purple); }
+  .msg .text {
+    font-size: 14px; line-height: 1.6;
+    color: var(--text); word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .msg .text strong { color: var(--text); font-weight: 700; }
+  .msg .text code {
+    background: var(--bg-1); border: 1px solid var(--line);
+    padding: 1px 6px; font-size: 12px;
+    color: var(--accent);
+  }
+  .msg .tool-calls {
+    margin-top: 8px;
+    font-size: 10px; letter-spacing: 0.15em;
+    color: var(--text-faint); text-transform: uppercase;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .msg .tool-pill {
+    border: 1px solid var(--line-bright);
+    padding: 2px 8px;
+    color: var(--text-faint);
+  }
+
+  /* TYPING INDICATOR */
+  .typing { display: inline-flex; gap: 4px; align-items: center; height: 22px; }
+  .typing .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--agent-purple);
+    animation: bounce 1.4s ease-in-out infinite;
+  }
+  .typing .dot:nth-child(2) { animation-delay: 0.15s; }
+  .typing .dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* SUGGESTIONS */
+  .suggestions {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 18px 0 0;
+  }
+  .suggestion-btn {
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--text-dim);
+    font-family: inherit; font-size: 12px;
+    padding: 8px 14px; cursor: pointer;
+    text-align: left;
+    transition: color .15s, border-color .15s, background .15s;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+  }
+  .suggestion-btn:hover {
+    color: var(--text);
+    border-color: var(--agent-purple);
+    background: rgba(167,139,255,0.06);
+  }
+
+  /* INPUT */
+  .composer {
+    border-top: 1px solid var(--line);
+    padding: 16px 0 16px;
+    display: flex; gap: 10px; align-items: flex-end;
+    background: var(--bg-0);
+  }
+  .composer textarea {
+    flex: 1; min-width: 0;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    color: var(--text); font-family: inherit;
+    font-size: 16px; /* prevents iOS zoom */
+    padding: 12px 16px;
+    outline: none; resize: none;
+    transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    line-height: 1.4; max-height: 140px;
+  }
+  .composer textarea:focus {
+    border-color: var(--agent-purple);
+    box-shadow: 0 0 0 1px rgba(167,139,255,0.4), 0 0 18px rgba(167,139,255,0.15);
+  }
+  .composer textarea::placeholder { color: var(--text-faint); }
+  .send-btn {
+    background: linear-gradient(180deg, #a78bff 0%, #7e5fff 100%);
+    color: #1a0d3a; font-family: inherit;
+    font-weight: 700; letter-spacing: 0.2em; font-size: 11px;
+    padding: 0 20px; border: none; cursor: pointer;
+    transition: filter .15s, box-shadow .15s, transform .1s, opacity .15s;
+    text-transform: uppercase;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    flex-shrink: 0; min-height: 48px;
+  }
+  .send-btn:hover { filter: brightness(1.1); box-shadow: 0 0 24px rgba(167,139,255,0.3); }
+  .send-btn:active { transform: translateY(1px); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; box-shadow: none; }
+
+  .disclaimer {
+    text-align: center; padding: 8px 0 16px;
+    font-size: 10px; letter-spacing: 0.15em;
+    color: var(--text-faint); text-transform: uppercase;
+  }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .topbar { padding: 0 12px; gap: 10px; height: 50px; }
+    .brand .name { font-size: 15px; letter-spacing: 0.12em; }
+    .brand .orb { width: 22px; height: 22px; }
+    .nav-link { font-size: 13px; padding: 4px 10px; letter-spacing: 0.12em; }
+    .lock-btn { padding: 5px 8px; font-size: 11px; margin-left: 8px; }
+
+    .page {
+      padding: 14px 14px 0;
+      height: calc(100vh - 50px); height: calc(100dvh - 50px);
+    }
+    .header { margin-bottom: 12px; padding-bottom: 10px; }
+    .msg .text { font-size: 14px; }
+    .composer { padding: 12px 0; }
+    .send-btn { padding: 0 16px; }
+  }
+  @media (max-width: 380px) {
+    .brand-right { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow tl"></div>
+<div class="glow br"></div>
+
+<header class="topbar">
+  <a class="brand" href="watchlist.html">
+    <div class="orb"></div>
+    <div><div class="name">WORLD<span>VEST</span></div></div>
+  </a>
+  <a class="nav-link" href="news.html">NEWS<span>FEED</span></a>
+  <a class="nav-link active" href="agent.html">AGENT<span>CHAT</span></a>
+  <a class="brand brand-right" href="watchlist.html">
+    <div class="name">WATCH<span>LIST</span></div>
+  </a>
+  <button class="lock-btn" onclick="logout()" title="Sign out"><i class="fa-solid fa-lock"></i></button>
+</header>
+
+<main class="page">
+  <div class="header">
+    <span class="label">AGENT · Powered by Gemini</span>
+    <button class="clear-btn" onclick="clearConvo()">Clear chat</button>
+  </div>
+
+  <div class="convo" id="convo">
+    <!-- messages render here -->
+  </div>
+
+  <div class="composer">
+    <textarea id="input" placeholder="Ask about markets, your watchlist, or anything finance…"
+              rows="1" onkeydown="onKeyDown(event)"></textarea>
+    <button class="send-btn" id="send-btn" onclick="sendMessage()">SEND</button>
+  </div>
+
+  <div class="disclaimer">For information only · Not financial advice</div>
+</main>
+
+<script>
+  // ============ GATE CHECK ============
+  if (localStorage.getItem("worldvest_unlocked") !== "true") {
+    window.location.replace("index.html");
+  }
+
+  // ============ CONFIG ============
+  // Paste your Gemini API key here. The key is restricted to worldvest.xyz
+  // via Google Cloud Console "Application restrictions → Websites", so even
+  // if it leaks publicly, only requests from your domain will work.
+  const GEMINI_API_KEY = "PASTE_YOUR_GEMINI_KEY_HERE";
+  const GEMINI_MODEL = "gemini-2.0-flash";
+
+  const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
+    authDomain: "watchlist-d9ade.firebaseapp.com",
+    projectId: "watchlist-d9ade",
+    storageBucket: "watchlist-d9ade.firebasestorage.app",
+    messagingSenderId: "927853955548",
+    appId: "1:927853955548:web:dedd485e291d3804542719",
+    measurementId: "G-9QNQ8ZVLSR"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  firebase.auth().signInAnonymously().catch(err => console.warn('auth failed:', err));
+
+  const CONVO_KEY = "worldvest_agent_convo_v1";
+
+  // ============ TOOL DEFINITIONS ============
+  // These are exposed to Gemini as functions it can call. Each one corresponds
+  // to a JS function below that actually fetches data.
+  const TOOLS = [{
+    functionDeclarations: [
+      {
+        name: "get_watchlist",
+        description: "Get the list of all stocks and crypto currently being tracked on the WorldVest watchlist, including their current price and 1-day percent change.",
+        parameters: { type: "OBJECT", properties: {} }
+      },
+      {
+        name: "get_price",
+        description: "Get the current price and 1-day percent change for a specific stock ticker. Use for stocks already on the watchlist or any other US stock symbol.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            symbol: { type: "STRING", description: "The stock ticker symbol, e.g. AAPL, NVDA, TSLA" }
+          },
+          required: ["symbol"]
+        }
+      },
+      {
+        name: "get_market_news",
+        description: "Get the latest general market news headlines from major financial sources.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            count: { type: "NUMBER", description: "Number of headlines to return (default 5, max 10)" }
+          }
+        }
+      },
+      {
+        name: "get_stock_news",
+        description: "Get the latest news headlines for a specific stock ticker.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            symbol: { type: "STRING", description: "The stock ticker symbol" },
+            count: { type: "NUMBER", description: "Number of headlines to return (default 3, max 5)" }
+          },
+          required: ["symbol"]
+        }
+      }
+    ]
+  }];
+
+  // ============ TOOL IMPLEMENTATIONS ============
+  function isCrypto(symbol) {
+    return symbol.startsWith('CG:') || symbol.includes(':');
+  }
+  function prettySym(symbol) {
+    if (symbol.startsWith('CG:')) return symbol.slice(3).toUpperCase();
+    if (symbol.includes(':')) {
+      const pair = symbol.split(':')[1] || '';
+      return pair.replace(/USDT$|USD$|USDC$|BUSD$/i, '');
+    }
+    return symbol;
+  }
+
+  async function tool_get_watchlist() {
+    const [wlSnap, prSnap] = await Promise.all([
+      db.ref('watchlist').once('value'),
+      db.ref('prices').once('value'),
+    ]);
+    const watchlist = wlSnap.val() || {};
+    const prices = prSnap.val() || {};
+    const items = Object.keys(watchlist).map(sym => {
+      const w = watchlist[sym] || {};
+      const p = prices[sym] || {};
+      return {
+        symbol: prettySym(sym),
+        name: w.name || '',
+        type: isCrypto(sym) ? 'crypto' : 'stock',
+        price: p.price ?? null,
+        percent_change_1d: p.percent ?? null,
+      };
+    });
+    return { count: items.length, items };
+  }
+
+  async function tool_get_price({ symbol }) {
+    if (!symbol) return { error: "symbol required" };
+    const sym = symbol.toUpperCase();
+    // Try Firebase first (already-tracked symbol)
+    const snap = await db.ref('prices/' + sym).once('value');
+    const cached = snap.val();
+    if (cached && cached.price) {
+      return {
+        symbol: sym,
+        price: cached.price,
+        percent_change_1d: cached.percent ?? null,
+        source: "watchlist"
+      };
+    }
+    // Fall back to a fresh Finnhub /quote (only works for stocks)
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${FINNHUB_KEY}`);
+      const q = await res.json();
+      if (!q || (q.c === 0 && q.pc === 0)) {
+        return { error: `No data found for ${sym}. It may not be a valid US stock ticker.` };
+      }
+      return {
+        symbol: sym,
+        price: Number(q.c),
+        percent_change_1d: Number(q.dp),
+        prev_close: Number(q.pc),
+        day_high: Number(q.h),
+        day_low: Number(q.l),
+        source: "finnhub_live"
+      };
+    } catch (e) {
+      return { error: "Failed to fetch price: " + e.message };
+    }
+  }
+
+  async function tool_get_market_news({ count = 5 } = {}) {
+    const n = Math.max(1, Math.min(10, Number(count) || 5));
+    try {
+      const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+      const items = await res.json();
+      const top = (items || [])
+        .filter(it => it.headline)
+        .slice(0, n)
+        .map(it => ({
+          headline: it.headline,
+          source: it.source,
+          summary: (it.summary || '').slice(0, 300),
+          published_minutes_ago: it.datetime ? Math.floor((Date.now()/1000 - it.datetime) / 60) : null,
+          url: it.url
+        }));
+      return { count: top.length, headlines: top };
+    } catch (e) {
+      return { error: "Failed to fetch news: " + e.message };
+    }
+  }
+
+  async function tool_get_stock_news({ symbol, count = 3 } = {}) {
+    if (!symbol) return { error: "symbol required" };
+    const n = Math.max(1, Math.min(5, Number(count) || 3));
+    const today = new Date();
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fmt = d => d.toISOString().slice(0,10);
+    try {
+      const url = `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${fmt(weekAgo)}&to=${fmt(today)}&token=${FINNHUB_KEY}`;
+      const res = await fetch(url);
+      const items = await res.json();
+      const top = (items || [])
+        .filter(it => it.headline)
+        .sort((a,b) => (b.datetime||0) - (a.datetime||0))
+        .slice(0, n)
+        .map(it => ({
+          headline: it.headline,
+          source: it.source,
+          summary: (it.summary || '').slice(0, 300),
+          published_hours_ago: it.datetime ? Math.floor((Date.now()/1000 - it.datetime) / 3600) : null,
+          url: it.url
+        }));
+      return { symbol, count: top.length, headlines: top };
+    } catch (e) {
+      return { error: "Failed to fetch stock news: " + e.message };
+    }
+  }
+
+  const TOOL_FUNCTIONS = {
+    get_watchlist: tool_get_watchlist,
+    get_price: tool_get_price,
+    get_market_news: tool_get_market_news,
+    get_stock_news: tool_get_stock_news,
+  };
+
+  // ============ GEMINI CALL ============
+  const SYSTEM_PROMPT = `You are WORLDVEST AGENT, a friendly and knowledgeable finance assistant for a small group of friends and family who track stocks and crypto together.
+
+Your style:
+- Conversational and direct, not academic
+- Use plain English; explain jargon when it comes up
+- Concise by default — one or two paragraphs unless they ask for depth
+- Use real numbers from your tools, never make up prices, percentages, or stats
+- Reference the user's actual watchlist when relevant ("you're tracking AAPL...")
+
+Hard rules:
+- NEVER give specific buy/sell advice. If asked "should I buy X?", explain factors to consider but don't recommend an action.
+- If you don't have data, say so. Don't guess or fabricate.
+- Use your tools to fetch live data — don't rely on memory for current prices, breaking news, or recent events.
+- If a question isn't finance/markets-related, you can still answer it briefly and steer back to markets.
+
+When using tools:
+- For "how's my watchlist doing", call get_watchlist
+- For "what's [TICKER] at" or "how's NVDA today", call get_price
+- For "what's happening in markets" or "any news today", call get_market_news
+- For news about a specific company, call get_stock_news
+
+Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
+
+  async function callGemini(messages) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const body = {
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: messages,
+      tools: TOOLS,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      }
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
+    }
+    return await res.json();
+  }
+
+  // ============ AGENT TURN HANDLER ============
+  // Loops: send to Gemini, if it asks for tools, run them and send results back, repeat.
+  async function agentTurn(userText, onUpdate) {
+    // Append user message to conversation history
+    convo.push({ role: 'user', parts: [{ text: userText }] });
+
+    let toolCallsThisTurn = [];
+    let safetyLoopCounter = 0;
+
+    while (safetyLoopCounter++ < 6) {
+      const response = await callGemini(convo);
+      const candidate = response.candidates?.[0];
+      if (!candidate) throw new Error('No candidate in Gemini response');
+
+      const parts = candidate.content?.parts || [];
+
+      // Check if model wants to call tools
+      const functionCalls = parts.filter(p => p.functionCall);
+      if (functionCalls.length > 0) {
+        // Save the model's tool-call message to history
+        convo.push({ role: 'model', parts });
+
+        // Execute each tool, build response parts
+        const responseParts = [];
+        for (const p of functionCalls) {
+          const fnName = p.functionCall.name;
+          const fnArgs = p.functionCall.args || {};
+          toolCallsThisTurn.push(fnName);
+          onUpdate({ tool: fnName });
+          let result;
+          try {
+            const fn = TOOL_FUNCTIONS[fnName];
+            if (!fn) {
+              result = { error: `Unknown function: ${fnName}` };
+            } else {
+              result = await fn(fnArgs);
+            }
+          } catch (e) {
+            result = { error: e.message };
+          }
+          responseParts.push({
+            functionResponse: { name: fnName, response: { result } }
+          });
+        }
+        // Send tool results back to model
+        convo.push({ role: 'user', parts: responseParts });
+        // Loop: model now has the data, generate again
+        continue;
+      }
+
+      // No tool calls — model gave a final text answer
+      const text = parts.map(p => p.text || '').join('').trim();
+      if (text) {
+        convo.push({ role: 'model', parts: [{ text }] });
+        return { text, tools: toolCallsThisTurn };
+      } else {
+        return { text: '(No response from agent.)', tools: toolCallsThisTurn };
+      }
+    }
+
+    return { text: '(Agent stopped after too many tool calls. Try a simpler question.)', tools: toolCallsThisTurn };
+  }
+
+  // ============ STATE & PERSISTENCE ============
+  let convo = [];
+
+  function loadConvo() {
+    try {
+      const stored = localStorage.getItem(CONVO_KEY);
+      if (stored) convo = JSON.parse(stored);
+    } catch (e) { convo = []; }
+  }
+  function saveConvo() {
+    try {
+      // Cap at last 30 messages so localStorage doesn't bloat
+      if (convo.length > 60) convo = convo.slice(-60);
+      localStorage.setItem(CONVO_KEY, JSON.stringify(convo));
+    } catch (e) { /* ignore */ }
+  }
+  function clearConvo() {
+    if (!confirm('Clear the conversation? This cannot be undone.')) return;
+    convo = [];
+    saveConvo();
+    renderConvo();
+  }
+
+  // ============ RENDERING ============
+  const safe = s => String(s||'').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+  // Tiny markdown-ish: **bold**, `code`
+  function renderText(t) {
+    return safe(t)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  function renderConvo() {
+    const box = document.getElementById('convo');
+    if (convo.length === 0) {
+      box.innerHTML = `
+        <div class="msg agent">
+          <div class="avatar">AI</div>
+          <div class="body">
+            <div class="who">Agent</div>
+            <div class="text">Hi — I'm your WorldVest market agent. I can pull live prices for anything on your watchlist, fetch market news, and explain what's going on. What would you like to know?</div>
+          </div>
+        </div>
+        <div class="suggestions">
+          <button class="suggestion-btn" onclick="useSuggestion('How is my watchlist performing today?')">How is my watchlist performing today?</button>
+          <button class="suggestion-btn" onclick="useSuggestion('Give me a 30-second recap of today\\'s market news')">30-second market recap</button>
+          <button class="suggestion-btn" onclick="useSuggestion('What is a P/E ratio?')">What is a P/E ratio?</button>
+          <button class="suggestion-btn" onclick="useSuggestion('Any big news on NVDA this week?')">Any big news on NVDA this week?</button>
+        </div>`;
+      return;
+    }
+    let html = '';
+    for (const m of convo) {
+      // Skip tool-call/tool-response messages from display (internal plumbing)
+      const hasFunctionCall = m.parts?.some(p => p.functionCall);
+      const hasFunctionResponse = m.parts?.some(p => p.functionResponse);
+      if (hasFunctionCall || hasFunctionResponse) continue;
+
+      const text = (m.parts || []).map(p => p.text || '').join('').trim();
+      if (!text) continue;
+
+      const isUser = m.role === 'user';
+      html += `
+        <div class="msg ${isUser ? 'user' : 'agent'}">
+          <div class="avatar">${isUser ? 'YOU' : 'AI'}</div>
+          <div class="body">
+            <div class="who">${isUser ? 'You' : 'Agent'}</div>
+            <div class="text">${renderText(text)}</div>
+          </div>
+        </div>`;
+    }
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function showTyping(toolNames) {
+    const box = document.getElementById('convo');
+    const existing = document.getElementById('typing-row');
+    const toolsHtml = toolNames && toolNames.length
+      ? `<div class="tool-calls">${toolNames.map(t => `<span class="tool-pill">${safe(t.replace('_', ' '))}</span>`).join('')}</div>`
+      : '';
+    const row = `
+      <div class="msg agent" id="typing-row">
+        <div class="avatar">AI</div>
+        <div class="body">
+          <div class="who">Agent</div>
+          <div class="text"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          ${toolsHtml}
+        </div>
+      </div>`;
+    if (existing) existing.outerHTML = row;
+    else box.insertAdjacentHTML('beforeend', row);
+    box.scrollTop = box.scrollHeight;
+  }
+  function hideTyping() {
+    const el = document.getElementById('typing-row');
+    if (el) el.remove();
+  }
+
+  // ============ SEND ============
+  let sending = false;
+  async function sendMessage() {
+    if (sending) return;
+    const inputEl = document.getElementById('input');
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_KEY_HERE") {
+      alert("Gemini API key isn't set yet. Edit agent.html and paste your key.");
+      return;
+    }
+
+    sending = true;
+    document.getElementById('send-btn').disabled = true;
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+
+    // Render user message immediately
+    convo.push({ role: 'user', parts: [{ text }] });
+    renderConvo();
+    showTyping([]);
+
+    // Pop the user message we just added — agentTurn will re-add it.
+    // (It manages its own conversation state including tool round-trips.)
+    convo.pop();
+
+    let collectedTools = [];
+    try {
+      const result = await agentTurn(text, ({ tool }) => {
+        collectedTools.push(tool);
+        showTyping(collectedTools);
+      });
+      hideTyping();
+      saveConvo();
+      renderConvo();
+    } catch (e) {
+      hideTyping();
+      console.error(e);
+      // Still save user msg so they can see what they sent
+      convo.push({ role: 'model', parts: [{ text: `Sorry, I hit an error: ${e.message}\n\nThis can happen if the Gemini key is misconfigured or the daily quota is exhausted.` }] });
+      saveConvo();
+      renderConvo();
+    } finally {
+      sending = false;
+      document.getElementById('send-btn').disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  function useSuggestion(text) {
+    const inputEl = document.getElementById('input');
+    inputEl.value = text;
+    sendMessage();
+  }
+
+  // ============ INPUT HANDLING ============
+  function onKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+  // Auto-resize textarea
+  document.getElementById('input').addEventListener('input', e => {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(140, e.target.scrollHeight) + 'px';
+  });
+
+  function logout() {
+    if (!confirm('Sign out and return to the landing page?')) return;
+    localStorage.removeItem('worldvest_unlocked');
+    window.location.replace('index.html');
+  }
+
+  // ============ BOOT ============
+  loadConvo();
+  renderConvo();
+</script>
+</body>
+</html>

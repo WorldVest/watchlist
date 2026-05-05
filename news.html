@@ -13,6 +13,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
 <style>
   :root {
@@ -296,6 +297,11 @@
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
+
+  // Sign in anonymously so Firebase rules requiring auth allow our reads.
+  firebase.auth().signInAnonymously().catch(err => {
+    console.warn('anonymous auth failed:', err);
+  });
 
   // ============ HELPERS ============
   const safe = s => String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));

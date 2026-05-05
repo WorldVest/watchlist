@@ -11,6 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
 <style>
   :root {
     --bg-0: #05070d;
@@ -310,17 +313,6 @@
     <div class="slogan">Global Investing, Redefined</div>
   </section>
 
-  <!-- NEWS -->
-  <section class="news">
-    <div class="news-head">
-      <span class="tag">Today's Markets</span>
-      <span class="updated" id="news-updated">—</span>
-    </div>
-    <div class="news-list" id="news-list">
-      <div class="news-loading">Loading market headlines…</div>
-    </div>
-  </section>
-
   <!-- GATE -->
   <section class="gate-section">
     <div class="label">Members Access</div>
@@ -334,6 +326,17 @@
     <div class="gate-error" id="gate-error">&nbsp;</div>
   </section>
 
+  <!-- NEWS -->
+  <section class="news">
+    <div class="news-head">
+      <span class="tag">Today's Markets</span>
+      <span class="updated" id="news-updated">—</span>
+    </div>
+    <div class="news-list" id="news-list">
+      <div class="news-loading">Loading market headlines…</div>
+    </div>
+  </section>
+
   <!-- FOOTER -->
   <footer class="footer">
     <span>© WorldVest 2026</span>
@@ -343,6 +346,23 @@
 </main>
 
 <script>
+  // ============ FIREBASE + ANONYMOUS AUTH ============
+  // We sign in anonymously on every page load so Firebase's security rules
+  // can require auth. The user sees nothing — it just happens.
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZar3sZBOEe__EGqh_IqTszD8CzeKJYYY",
+    authDomain: "watchlist-d9ade.firebaseapp.com",
+    projectId: "watchlist-d9ade",
+    storageBucket: "watchlist-d9ade.firebasestorage.app",
+    messagingSenderId: "927853955548",
+    appId: "1:927853955548:web:dedd485e291d3804542719",
+    measurementId: "G-9QNQ8ZVLSR"
+  };
+  firebase.initializeApp(firebaseConfig);
+  firebase.auth().signInAnonymously().catch(err => {
+    console.warn('anonymous auth failed:', err);
+  });
+
   // ============ CONFIG ============
   // Finnhub key for news (public-side use; same key already in your watchlist).
   const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";
@@ -358,7 +378,7 @@
   //
   // Default placeholder hash below = the word "changeme" (so the page still
   // works on first deploy). Replace it with your own hash before going live.
-  const PASSWORD_HASH = "1009d711aa9c533977a457c96bbfcf224422b63c5424c1106a8e1d52602a8a44";
+  const PASSWORD_HASH = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
 
   // localStorage key for "remember me"
   const UNLOCK_KEY = "worldvest_unlocked";

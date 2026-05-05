@@ -362,8 +362,14 @@
   // Paste your Gemini API key here. The key is restricted to worldvest.xyz
   // via Google Cloud Console "Application restrictions → Websites", so even
   // if it leaks publicly, only requests from your domain will work.
-  const GEMINI_API_KEY = "AIzaSyBN2oNDxL0EsqcqG5PAj4wnaQzFzYhz1DA";
-  const GEMINI_MODEL = "gemini-2.0-flash";
+  const GEMINI_API_KEY = "PASTE_YOUR_GEMINI_KEY_HERE";
+  // Using gemini-2.5-flash (replaces deprecated 2.0-flash, retiring June 2026).
+  // Free-tier limits: ~10 RPM, ~250 RPD. We add throttling below to stay under.
+  const GEMINI_MODEL = "gemini-2.5-flash";
+  // Minimum spacing between Gemini calls to avoid bursting the per-minute limit.
+  // 7s between calls = max ~8 calls/min, comfortably under the 10 RPM cap even
+  // if multiple tool round-trips happen back-to-back.
+  const MIN_CALL_SPACING_MS = 7000;
 
   const FINNHUB_KEY = "d7ok9vhr01qsb7bf9bdgd7ok9vhr01qsb7bf9be0";
 
@@ -576,7 +582,17 @@ When using tools:
 
 Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
 
+  // Track last call time so we can space out requests
+  let lastCallAt = 0;
+
   async function callGemini(messages) {
+    // Enforce minimum spacing between calls — protects against the per-minute
+    // rate limit when tool round-trips fire several calls in a row.
+    const sinceLast = Date.now() - lastCallAt;
+    if (sinceLast < MIN_CALL_SPACING_MS) {
+      await new Promise(r => setTimeout(r, MIN_CALL_SPACING_MS - sinceLast));
+    }
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const body = {
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -587,16 +603,34 @@ Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
         maxOutputTokens: 1024,
       }
     };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
+
+    // Up to 3 attempts, with backoff on 429 (rate-limited)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      lastCallAt = Date.now();
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 429) {
+        // Per-minute limit hit. Wait progressively longer and retry.
+        const waitMs = attempt * 15000; // 15s, then 30s, then 45s
+        if (attempt < 3) {
+          console.warn(`Gemini 429 (attempt ${attempt}/3), waiting ${waitMs}ms`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+        throw new Error("Rate limit hit. The free Gemini tier allows ~10 requests per minute. Try again in a minute.");
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini ${res.status}: ${errText.slice(0, 300)}`);
+      }
+      return await res.json();
     }
-    return await res.json();
+    throw new Error("Gemini call failed after retries");
   }
 
   // ============ AGENT TURN HANDLER ============
@@ -801,8 +835,11 @@ Format prices like $123.45, percentages with sign like +2.34% or -1.12%.`;
     } catch (e) {
       hideTyping();
       console.error(e);
-      // Still save user msg so they can see what they sent
-      convo.push({ role: 'model', parts: [{ text: `Sorry, I hit an error: ${e.message}\n\nThis can happen if the Gemini key is misconfigured or the daily quota is exhausted.` }] });
+      let friendly = `Sorry, I hit an error: ${e.message}`;
+      if (e.message.includes('Rate limit') || e.message.includes('429') || e.message.includes('quota')) {
+        friendly = "I'm being rate-limited by the free Gemini tier (about 10 requests per minute, 250 per day). Wait a minute and try again. If this happens often, the daily limit resets at midnight Pacific time.";
+      }
+      convo.push({ role: 'model', parts: [{ text: friendly }] });
       saveConvo();
       renderConvo();
     } finally {

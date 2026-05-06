@@ -372,6 +372,31 @@
   .pct.down { color: var(--warn);   border-color: rgba(255,82,119,0.25); background: rgba(255,82,119,0.06); }
   .pct.flat { color: var(--text-dim); }
 
+  /* Sparkline column */
+  .th-spark { text-align: center !important; padding-left: 8px !important; padding-right: 8px !important; }
+  .spark-cell { text-align: center; padding-left: 8px !important; padding-right: 8px !important; }
+  .spark {
+    display: inline-block;
+    width: 90px; height: 28px;
+    vertical-align: middle;
+    opacity: 0.85;
+  }
+  .spark-empty {
+    display: inline-block;
+    color: var(--text-faint); font-size: 10px;
+    letter-spacing: 0.15em;
+  }
+
+  /* Chat ping — gentle flash on the chat panel header when a new message
+     arrives while user is viewing the news tab. */
+  .panel-head.ping {
+    animation: chatPing 1.4s ease-in-out 2;
+  }
+  @keyframes chatPing {
+    0%, 100% { background: rgba(0,0,0,0.3); }
+    50%      { background: rgba(0,255,174,0.18); }
+  }
+
   .del {
     background: transparent; border: 1px solid var(--line-bright);
     color: var(--text-faint); padding: 6px 10px; cursor: pointer;
@@ -515,6 +540,8 @@
     .asset .name { font-size: 10px; max-width: 100px; }
     .price { font-size: 15px; }
     .pct { font-size: 12px; padding: 4px 8px; min-width: 70px; }
+    /* Hide sparkline on phones — too cramped */
+    .th-spark, .spark-cell { display: none !important; }
 
     .news-section { padding: 14px; }
     .news-item { padding: 14px; gap: 12px; }
@@ -588,6 +615,7 @@
           <tr>
             <th>Asset</th>
             <th>Price</th>
+            <th class="th-spark">7D</th>
             <th>1D %</th>
             <th></th>
           </tr>
@@ -642,6 +670,7 @@
   // ============ STATE ============
   let watchlist = {};
   let prices = {};
+  let historical = {}; // { SYMBOL: [{t, p}, ...] sorted by t asc }
   let chatCount = 0;
   let currentView = 'watchlist'; // 'watchlist' | 'news'
 
@@ -690,6 +719,42 @@
       const ob = watchlist[b].order ?? watchlist[b].addedAt ?? 0;
       return oa - ob;
     });
+  }
+
+  // ============ SPARKLINE ============
+  // Build a simple SVG polyline for a 7-day price series.
+  // Color: green if last >= first, red if down. Renders nothing if <2 points.
+  function sparklineSvg(symbol) {
+    const series = historical[symbol];
+    if (!Array.isArray(series) || series.length < 2) {
+      return '<span class="spark-empty">—</span>';
+    }
+    const W = 90, H = 28, PAD = 2;
+    const prices = series.map(s => s.p).filter(Number.isFinite);
+    if (prices.length < 2) return '<span class="spark-empty">—</span>';
+
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const range = max - min || 1; // avoid divide-by-zero on flat series
+    const stepX = (W - PAD * 2) / (prices.length - 1);
+
+    const pts = prices.map((p, i) => {
+      const x = PAD + i * stepX;
+      const y = H - PAD - ((p - min) / range) * (H - PAD * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    const up = prices[prices.length - 1] >= prices[0];
+    const stroke = up ? 'var(--accent)' : 'var(--warn)';
+    const fill = up ? 'rgba(0,255,174,0.10)' : 'rgba(255,82,119,0.10)';
+
+    // Build a closed area shape underneath the line for subtle fill
+    const areaPts = `${PAD},${H - PAD} ${pts} ${(W - PAD).toFixed(1)},${H - PAD}`;
+
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <polygon points="${areaPts}" fill="${fill}" stroke="none" />
+      <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
+    </svg>`;
   }
 
   // ============ VIEW TOGGLE ============
@@ -783,6 +848,7 @@
             </div>
           </td>
           <td><span class="price">${fmtPrice(p.price)}</span></td>
+          <td class="spark-cell">${sparklineSvg(sym)}</td>
           <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
           <td><button class="del" onclick="deleteTicker('${safe(sym)}')"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
@@ -801,11 +867,13 @@
       const p = prices[sym] || {};
       const priceEl = row.querySelector('.price');
       const pctEl = row.querySelector('.pct');
+      const sparkCell = row.querySelector('.spark-cell');
       if (priceEl) priceEl.textContent = fmtPrice(p.price);
       if (pctEl) {
         pctEl.textContent = fmtPct(p.percent);
         pctEl.className = 'pct ' + dirClass(p.percent);
       }
+      if (sparkCell) sparkCell.innerHTML = sparklineSvg(sym);
     }
     updateFeedStatus();
     return true;
@@ -874,6 +942,18 @@
     prices = snap.val() || {};
     if (!updatePricesInPlace()) renderWatchlist();
   });
+  db.ref('historical').on('value', snap => {
+    const raw = snap.val() || {};
+    // raw[symbol] is an object of {pushKey: {t, p}}. Convert to sorted array.
+    const out = {};
+    for (const sym of Object.keys(raw)) {
+      const entries = Object.values(raw[sym] || {});
+      entries.sort((a, b) => (a.t || 0) - (b.t || 0));
+      out[sym] = entries;
+    }
+    historical = out;
+    if (!updatePricesInPlace()) renderWatchlist();
+  });
 
   // Recovery polling (catches stalled listeners)
   setInterval(async () => {
@@ -895,6 +975,7 @@
   // Visibility recovery — refetch when tab becomes visible again
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible') {
+      clearUnread();
       try {
         const [wlSnap, prSnap] = await Promise.all([
           db.ref('watchlist').once('value'),
@@ -909,6 +990,43 @@
   });
 
   // ============ CHAT ============
+  // Track unread count for tab title pings. Cleared when user views chat.
+  let unreadCount = 0;
+  let initialChatLoad = true; // skip pings on initial backfill of last 100 msgs
+  const ORIGINAL_TITLE = document.title;
+
+  function updateTabTitle() {
+    document.title = unreadCount > 0
+      ? `(${unreadCount}) ${ORIGINAL_TITLE} 💬`
+      : ORIGINAL_TITLE;
+  }
+
+  function clearUnread() {
+    if (unreadCount === 0) return;
+    unreadCount = 0;
+    updateTabTitle();
+  }
+
+  function pingChat() {
+    // Visual flash on chat header — only meaningful when user is on news tab,
+    // since chat is offscreen there. (On watchlist view they can already see it.)
+    if (currentView === 'news') {
+      const head = document.querySelector('.chat .panel-head');
+      if (head) {
+        head.classList.remove('ping');
+        // Force reflow so animation re-triggers if pings stack quickly
+        void head.offsetWidth;
+        head.classList.add('ping');
+        setTimeout(() => head.classList.remove('ping'), 3000);
+      }
+    }
+    // Tab title ping — only when tab is in background
+    if (document.visibilityState !== 'visible') {
+      unreadCount++;
+      updateTabTitle();
+    }
+  }
+
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val(), key = snap.key;
     if (!m) return;
@@ -929,7 +1047,16 @@
     box.scrollTop = box.scrollHeight;
     chatCount++;
     document.getElementById('chat-count').textContent = chatCount + ' MSG';
+
+    // Ping for genuinely new messages, not the historical backfill
+    if (!initialChatLoad) pingChat();
   });
+  // After Firebase delivers the initial batch, future child_added events
+  // are real new messages. Use a microtask to flip the flag right after.
+  db.ref('chat').limitToLast(100).once('value').then(() => {
+    initialChatLoad = false;
+  });
+
   db.ref('chat').on('child_removed', snap => {
     const node = document.querySelector(`.msg[data-key="${snap.key}"]`);
     if (node) node.remove();
@@ -972,6 +1099,7 @@
       timestamp: Date.now()
     });
     input.value = '';
+    clearUnread();
   }
   function logout() {
     if (!confirm('Sign out and return to the landing page?')) return;
@@ -1056,6 +1184,11 @@
       document.getElementById('suggestions').classList.add('hidden');
     }
   });
+
+  // Clear unread when user is clearly engaging with the chat
+  document.getElementById('chat-input').addEventListener('focus', clearUnread);
+  document.getElementById('messages').addEventListener('scroll', clearUnread, { passive: true });
+  document.querySelector('.chat').addEventListener('click', clearUnread);
 
   // ============ NEWS ============
   // Mix general market news with per-watchlist-stock news, sorted by recency.

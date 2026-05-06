@@ -615,8 +615,8 @@
           <tr>
             <th>Asset</th>
             <th>Price</th>
-            <th class="th-spark">7D</th>
             <th>1D %</th>
+            <th class="th-spark">7D</th>
             <th></th>
           </tr>
         </thead>
@@ -848,8 +848,8 @@
             </div>
           </td>
           <td><span class="price">${fmtPrice(p.price)}</span></td>
-          <td class="spark-cell">${sparklineSvg(sym)}</td>
           <td><span class="pct ${dirClass(p.percent)}">${fmtPct(p.percent)}</span></td>
+          <td class="spark-cell">${sparklineSvg(sym)}</td>
           <td><button class="del" onclick="deleteTicker('${safe(sym)}')"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`;
     }).join('');

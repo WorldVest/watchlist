@@ -934,9 +934,19 @@
   }
 
   // ============ FIREBASE LISTENERS ============
+  let watchlistFirstLoad = true;
   db.ref('watchlist').on('value', snap => {
+    const before = Object.keys(watchlist).join(',');
     watchlist = snap.val() || {};
+    const after = Object.keys(watchlist).join(',');
     renderWatchlist();
+    // If the watchlist composition actually changed (not just a re-fire of
+    // the same data) AND we're on the news view, refresh news so it picks
+    // up the new tickers. Skip on first load — loadNews() at boot handles it.
+    if (!watchlistFirstLoad && before !== after && currentView === 'news') {
+      loadNews(true);
+    }
+    watchlistFirstLoad = false;
   });
   db.ref('prices').on('value', snap => {
     prices = snap.val() || {};
@@ -1204,8 +1214,20 @@
     } catch (e) { return []; }
   }
   async function fetchWatchlistNews() {
-    const stockSyms = Object.keys(watchlist).filter(s => !isCrypto(s));
+    // Read watchlist directly from Firebase rather than in-memory state.
+    // This avoids a race on first page load where loadNews() can fire
+    // before the /watchlist listener has populated the local copy.
+    let stockSyms = [];
+    try {
+      const snap = await db.ref('watchlist').once('value');
+      const data = snap.val() || {};
+      stockSyms = Object.keys(data).filter(s => !isCrypto(s));
+    } catch (e) {
+      console.warn('watchlist read for news failed:', e);
+      return [];
+    }
     if (stockSyms.length === 0) return [];
+
     const today = new Date();
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     const fmt = d => d.toISOString().slice(0,10);

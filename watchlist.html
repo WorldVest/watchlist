@@ -130,21 +130,25 @@
     margin-left: auto;
     display: flex; align-items: center; gap: 14px;
   }
-  .toggle-btn {
+  .nav-btn {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 16px;
-    letter-spacing: 0.18em; color: var(--text-dim);
-    text-decoration: none; padding: 6px 14px;
+    font-weight: 700; font-size: 15px;
+    letter-spacing: 0.16em; color: var(--text-dim);
+    text-decoration: none; padding: 6px 12px;
     border: 1px solid var(--line-bright);
     background: transparent; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s;
     white-space: nowrap;
     -webkit-appearance: none; appearance: none; border-radius: 0;
   }
-  .toggle-btn span { color: var(--accent); }
-  .toggle-btn:hover {
+  .nav-btn span { color: var(--accent); }
+  .nav-btn:hover {
     color: var(--text); border-color: var(--accent);
     background: rgba(0,255,174,0.06);
+  }
+  .nav-btn.active {
+    color: var(--text); border-color: var(--accent);
+    background: rgba(0,255,174,0.12);
   }
 
   .lock-btn {
@@ -494,6 +498,153 @@
     text-transform: uppercase;
   }
 
+  /* ============ PORTFOLIO ============ */
+  .port-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 24px; border-bottom: 1px solid var(--line);
+    background: rgba(0,0,0,0.3);
+  }
+  .port-toolbar.hidden { display: none; }
+  .port-select {
+    flex: 1; min-width: 0;
+    background: var(--bg-1); border: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 14px;
+    padding: 10px 14px; outline: none; letter-spacing: 0.05em;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    transition: border-color .15s, box-shadow .15s;
+    cursor: pointer;
+  }
+  .port-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-glow);
+  }
+  .port-new-btn {
+    background: linear-gradient(180deg, #00ffae 0%, #00b888 100%);
+    color: #03130d; font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; letter-spacing: 0.2em; font-size: 11px;
+    padding: 0 18px; border: none; cursor: pointer;
+    transition: filter .15s, box-shadow .15s;
+    text-transform: uppercase;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    min-height: 42px; flex-shrink: 0;
+  }
+  .port-new-btn:hover { box-shadow: 0 0 24px var(--accent-glow); filter: brightness(1.1); }
+  .port-del-btn {
+    background: transparent; border: 1px solid var(--line-bright);
+    color: var(--text-faint); padding: 0 12px; cursor: pointer;
+    font-family: inherit; font-size: 13px;
+    transition: color .15s, border-color .15s, background .15s;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    min-height: 42px; flex-shrink: 0;
+  }
+  .port-del-btn:hover {
+    color: var(--warn); border-color: var(--warn); background: rgba(255,82,119,0.08);
+  }
+
+  .port-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(10,14,26,0.3);
+  }
+  .port-name-row {
+    display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px;
+  }
+  .port-label {
+    font-size: 10px; letter-spacing: 0.3em;
+    color: var(--text-faint); text-transform: uppercase;
+  }
+  .port-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 22px;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .port-summary {
+    display: flex; align-items: baseline; gap: 36px;
+  }
+  .port-total, .port-change {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .port-total-label {
+    font-size: 10px; letter-spacing: 0.25em;
+    color: var(--text-faint); text-transform: uppercase;
+  }
+  .port-total-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 36px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 24px var(--accent-glow);
+  }
+  .port-total-change {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-dim);
+  }
+  .port-total-change.up { color: var(--accent); }
+  .port-total-change.down { color: var(--warn); }
+
+  .port-search-wrap {
+    position: relative; padding: 16px 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(0,0,0,0.2);
+  }
+  .port-search-wrap .icon {
+    position: absolute; left: 38px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint); font-size: 12px; pointer-events: none;
+  }
+  .port-search-wrap input {
+    width: 100%; background: var(--bg-1); border: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 16px;
+    padding: 11px 14px 11px 38px; outline: none; letter-spacing: 0.05em;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+  }
+  .port-search-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-glow), 0 0 18px rgba(0,255,174,0.15);
+  }
+  .port-search-wrap input::placeholder { color: var(--text-faint); letter-spacing: 0.1em; font-size: 14px; }
+  #port-suggestions {
+    position: absolute; top: calc(100% - 8px); left: 24px; right: 24px;
+    background: var(--bg-1); border: 1px solid var(--line-bright);
+    max-height: 380px; overflow-y: auto; z-index: 100;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    -webkit-overflow-scrolling: touch;
+  }
+  #port-suggestions.hidden { display: none; }
+
+  .port-table thead th {
+    text-align: right; padding: 14px 16px;
+  }
+  .port-table thead th:first-child { text-align: left; padding-left: 24px; }
+  .port-table thead th:last-child { padding-right: 24px; }
+  .port-table tbody td {
+    padding: 16px; text-align: right; font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .port-table tbody td:first-child { padding-left: 24px; text-align: left; }
+  .port-table tbody td:last-child { padding-right: 24px; }
+
+  .qty-input {
+    width: 110px; background: var(--bg-1); border: 1px solid var(--line);
+    color: var(--text); font-family: inherit; font-size: 14px;
+    padding: 8px 12px; outline: none; text-align: right;
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none; appearance: none; border-radius: 0;
+    transition: border-color .15s;
+  }
+  .qty-input:focus { border-color: var(--accent); }
+
+  .port-value { font-size: 16px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .port-alloc { color: var(--text-dim); font-size: 13px; }
+
+  .port-disclaimer {
+    padding: 24px; text-align: center;
+    font-size: 10px; letter-spacing: 0.2em;
+    color: var(--text-faint); text-transform: uppercase;
+  }
+
   /* ============ MOBILE ============ */
   @media (max-width: 768px) {
     .app {
@@ -509,7 +660,7 @@
     .top-stats { display: none; }
     .brand .name { font-size: 15px; letter-spacing: 0.12em; }
     .brand .orb { width: 22px; height: 22px; }
-    .toggle-btn { font-size: 13px; padding: 4px 10px; letter-spacing: 0.12em; }
+    .nav-btn { font-size: 12px; padding: 4px 8px; letter-spacing: 0.1em; }
     .lock-btn { padding: 5px 8px; font-size: 11px; }
     .right-cluster { gap: 8px; }
 
@@ -550,6 +701,24 @@
     .news-item .headline { font-size: 14px; }
     .news-item .summary { display: none; }
     .news-item .meta { font-size: 9px; gap: 8px; flex-wrap: wrap; }
+
+    .port-toolbar { padding: 12px; gap: 8px; }
+    .port-select { font-size: 14px; padding: 10px 12px; }
+    .port-new-btn, .port-del-btn { padding: 0 12px; min-height: 42px; font-size: 10px; }
+    .port-header { padding: 18px 14px; }
+    .port-name-row { gap: 10px; margin-bottom: 14px; }
+    .port-name { font-size: 18px; letter-spacing: 0.06em; }
+    .port-summary { gap: 24px; flex-wrap: wrap; }
+    .port-total-value { font-size: 28px; }
+    .port-total-change { font-size: 15px; }
+    .port-search-wrap { padding: 12px 14px; }
+    .port-search-wrap .icon { left: 28px; }
+    #port-suggestions { left: 14px; right: 14px; }
+    .port-table tbody td { padding: 14px 8px; font-size: 13px; }
+    .port-table tbody td:first-child { padding-left: 12px; }
+    .port-table tbody td:last-child { padding-right: 12px; }
+    .qty-input { width: 80px; font-size: 13px; padding: 6px 8px; }
+    .port-value { font-size: 14px; }
   }
   @media (max-width: 380px) {
     .asset .name { display: none; }
@@ -576,7 +745,9 @@
       <div class="stat"><span>LAST SYNC</span><b id="stat-sync">—</b></div>
     </div>
     <div class="right-cluster">
-      <button class="toggle-btn" id="toggle-btn" onclick="toggleView()">NEWS<span>FEED</span></button>
+      <button class="nav-btn" data-view="watchlist" onclick="setView('watchlist')">WATCH<span>LIST</span></button>
+      <button class="nav-btn" data-view="news" onclick="setView('news')">NEWS<span>FEED</span></button>
+      <button class="nav-btn" data-view="port" onclick="setView('port')">BUILD<span>PORT</span></button>
       <button class="lock-btn" onclick="logout()" title="Sign out"><i class="fa-solid fa-lock"></i></button>
     </div>
   </header>
@@ -609,6 +780,13 @@
       </div>
     </div>
 
+    <!-- Portfolio toolbar (only visible on port view) -->
+    <div class="toolbar port-toolbar hidden" id="port-toolbar">
+      <select id="port-select" class="port-select" onchange="onPortSelectChange()"></select>
+      <button class="port-new-btn" id="port-new-btn" onclick="createPortfolio()">+ NEW</button>
+      <button class="port-del-btn" id="port-del-btn" onclick="deleteCurrentPortfolio()" title="Delete this portfolio"><i class="fa-solid fa-trash"></i></button>
+    </div>
+
     <!-- Watchlist view -->
     <div class="view" id="watchlist-view">
       <table>
@@ -639,6 +817,59 @@
         <div class="news-list" id="news-list">
           <div class="news-loading">Loading headlines…</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Portfolio view -->
+    <div class="view hidden" id="port-view">
+      <div id="port-empty" class="empty hidden">
+        <h3>NO PORTFOLIOS YET</h3>
+        <p>Click + NEW above to create your first hypothetical portfolio.</p>
+      </div>
+      <div id="port-detail">
+        <div class="port-header">
+          <div class="port-name-row">
+            <span class="port-label">PORTFOLIO</span>
+            <span class="port-name" id="port-name">—</span>
+          </div>
+          <div class="port-summary">
+            <div class="port-total">
+              <span class="port-total-label">TOTAL VALUE</span>
+              <span class="port-total-value" id="port-total-value">$0.00</span>
+            </div>
+            <div class="port-change">
+              <span class="port-total-label">TODAY</span>
+              <span class="port-total-change" id="port-total-change">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="port-search-wrap">
+          <i class="fa-solid fa-magnifying-glass icon"></i>
+          <input id="port-search" placeholder="add position · search stocks or crypto"
+                 onkeyup="handlePortSearchInput()" onfocus="handlePortSearchInput()"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+          <div id="port-suggestions" class="hidden"></div>
+        </div>
+
+        <table class="port-table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Shares</th>
+              <th>Price</th>
+              <th>Value</th>
+              <th>Alloc</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="port-body"></tbody>
+        </table>
+        <div id="port-positions-empty" class="empty hidden">
+          <h3>NO POSITIONS YET</h3>
+          <p>Search above to add your first position.</p>
+        </div>
+        <div class="port-disclaimer">Hypothetical portfolio · Not real holdings · Not financial advice</div>
       </div>
     </div>
   </main>
@@ -675,7 +906,13 @@
   let prices = {};
   let historical = {}; // { SYMBOL: [{t, p}, ...] sorted by t asc }
   let chatCount = 0;
-  let currentView = 'watchlist'; // 'watchlist' | 'news'
+  let currentView = 'watchlist'; // 'watchlist' | 'news' | 'port'
+
+  // Portfolios
+  // portfolios = { portfolioId: { id, name, createdAt, positions: { SYMBOL: { qty } } } }
+  let portfolios = {};
+  let currentPortId = null;
+  const MAX_PORTFOLIOS = 5;
 
   // ============ HELPERS ============
   const isCrypto = sym => sym.startsWith('CG:') || sym.includes(':');
@@ -760,37 +997,38 @@
     </svg>`;
   }
 
-  // ============ VIEW TOGGLE ============
-  function toggleView() {
-    currentView = currentView === 'watchlist' ? 'news' : 'watchlist';
+  // ============ VIEW SWITCHING ============
+  function setView(view) {
+    if (view !== 'watchlist' && view !== 'news' && view !== 'port') view = 'watchlist';
+    currentView = view;
     applyView();
-    if (currentView === 'news') loadNews();
-    // Update URL hash so refresh keeps the view
-    history.replaceState(null, '', currentView === 'news' ? '#news' : '#watchlist');
+    if (view === 'news') loadNews();
+    if (view === 'port') renderPortView();
+    history.replaceState(null, '', '#' + view);
   }
 
   function applyView() {
-    const watchlistView = document.getElementById('watchlist-view');
-    const newsView = document.getElementById('news-view');
-    const toolbar = document.getElementById('toolbar');
-    const toggleBtn = document.getElementById('toggle-btn');
+    const wlView = document.getElementById('watchlist-view');
+    const nwView = document.getElementById('news-view');
+    const ptView = document.getElementById('port-view');
+    const wlToolbar = document.getElementById('toolbar');
+    const ptToolbar = document.getElementById('port-toolbar');
 
-    if (currentView === 'watchlist') {
-      watchlistView.classList.remove('hidden');
-      newsView.classList.add('hidden');
-      toolbar.classList.remove('hidden');
-      toggleBtn.innerHTML = 'NEWS<span>FEED</span>';
-    } else {
-      watchlistView.classList.add('hidden');
-      newsView.classList.remove('hidden');
-      toolbar.classList.add('hidden');
-      toggleBtn.innerHTML = 'WATCH<span>LIST</span>';
-    }
+    wlView.classList.toggle('hidden', currentView !== 'watchlist');
+    nwView.classList.toggle('hidden', currentView !== 'news');
+    ptView.classList.toggle('hidden', currentView !== 'port');
+    wlToolbar.classList.toggle('hidden', currentView !== 'watchlist');
+    ptToolbar.classList.toggle('hidden', currentView !== 'port');
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === currentView);
+    });
   }
 
   // Honor URL hash on first load
-  if (window.location.hash === '#news') {
-    currentView = 'news';
+  const hash = window.location.hash.replace('#', '');
+  if (hash === 'news' || hash === 'port' || hash === 'watchlist') {
+    currentView = hash;
   }
   applyView();
 
@@ -954,6 +1192,7 @@
   db.ref('prices').on('value', snap => {
     prices = snap.val() || {};
     if (!updatePricesInPlace()) renderWatchlist();
+    if (currentView === 'port' && currentPortId) renderPortPositions();
   });
   db.ref('historical').on('value', snap => {
     const raw = snap.val() || {};
@@ -1043,7 +1282,8 @@
   db.ref('chat').limitToLast(100).on('child_added', snap => {
     const m = snap.val(), key = snap.key;
     if (!m) return;
-    const time = new Date(m.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const d = new Date(m.timestamp || Date.now());
+    const dateLabel = (d.getMonth() + 1) + '/' + d.getDate();
     const div = document.createElement('div');
     div.className = 'msg'; div.dataset.key = key;
     div.innerHTML = `
@@ -1052,7 +1292,7 @@
       </button>
       <div class="h">
         <span class="who">${safe(m.name) || 'ANON'}</span>
-        <span>${time}</span>
+        <span>${dateLabel}</span>
       </div>
       <div class="body">${safe(m.message)}</div>`;
     const box = document.getElementById('messages');
@@ -1317,6 +1557,304 @@
   if (currentView === 'news') loadNews(true);
   // Refresh news every 5 min if we're on the news view
   setInterval(() => { if (currentView === 'news') loadNews(true); }, 5 * 60 * 1000);
+
+  // ============ PORTFOLIOS ============
+  db.ref('portfolios').on('value', snap => {
+    portfolios = snap.val() || {};
+    // If currentPortId no longer exists, pick another (or null)
+    if (currentPortId && !portfolios[currentPortId]) {
+      currentPortId = null;
+    }
+    if (!currentPortId) {
+      const ids = Object.keys(portfolios);
+      if (ids.length > 0) {
+        // Pick most recently created
+        ids.sort((a, b) => (portfolios[b].createdAt || 0) - (portfolios[a].createdAt || 0));
+        currentPortId = ids[0];
+      }
+    }
+    if (currentView === 'port') renderPortView();
+  });
+
+  function createPortfolio() {
+    const existingCount = Object.keys(portfolios).length;
+    if (existingCount >= MAX_PORTFOLIOS) {
+      alert(`Maximum of ${MAX_PORTFOLIOS} portfolios reached. Delete one first.`);
+      return;
+    }
+    const name = (prompt('Portfolio name?') || '').trim().slice(0, 40);
+    if (!name) return;
+    const id = db.ref('portfolios').push().key;
+    db.ref('portfolios/' + id).set({
+      id,
+      name,
+      createdAt: Date.now(),
+      positions: {}
+    }).then(() => {
+      currentPortId = id;
+      renderPortView();
+    }).catch(e => {
+      console.warn('create portfolio failed:', e);
+      alert('Could not create portfolio: ' + e.message);
+    });
+  }
+
+  function deleteCurrentPortfolio() {
+    if (!currentPortId || !portfolios[currentPortId]) return;
+    const p = portfolios[currentPortId];
+    if (!confirm(`Delete portfolio "${p.name}"? This cannot be undone.`)) return;
+    db.ref('portfolios/' + currentPortId).remove().then(() => {
+      currentPortId = null;
+      // The listener will pick a new currentPortId and re-render
+    }).catch(e => console.warn('delete failed:', e));
+  }
+
+  function onPortSelectChange() {
+    const sel = document.getElementById('port-select');
+    currentPortId = sel.value || null;
+    renderPortView();
+    history.replaceState(null, '', '#port');
+  }
+
+  function addPositionToPort(symbol, meta) {
+    if (!currentPortId || !portfolios[currentPortId]) {
+      alert('Create a portfolio first.');
+      return;
+    }
+    if (!symbol) return;
+    const port = portfolios[currentPortId];
+    if (port.positions && port.positions[symbol]) {
+      // Already have it — no-op (could focus the qty input instead, but keep simple)
+      return;
+    }
+    db.ref(`portfolios/${currentPortId}/positions/${symbol}`).set({
+      qty: 1,
+      tickerLabel: meta.tickerLabel || symbol,
+      name: meta.name || '',
+      logoUrl: meta.logoUrl || '',
+      addedAt: Date.now(),
+    }).catch(e => console.warn('add position failed:', e));
+    document.getElementById('port-search').value = '';
+    document.getElementById('port-suggestions').classList.add('hidden');
+  }
+
+  function updatePositionQty(symbol, qtyStr) {
+    if (!currentPortId) return;
+    const qty = Number(qtyStr);
+    if (!Number.isFinite(qty) || qty < 0) return;
+    db.ref(`portfolios/${currentPortId}/positions/${symbol}/qty`).set(qty)
+      .catch(e => console.warn('qty update failed:', e));
+  }
+
+  function removePosition(symbol) {
+    if (!currentPortId) return;
+    db.ref(`portfolios/${currentPortId}/positions/${symbol}`).remove()
+      .catch(e => console.warn('remove position failed:', e));
+  }
+
+  function renderPortView() {
+    const selectEl = document.getElementById('port-select');
+    const detailEl = document.getElementById('port-detail');
+    const emptyEl = document.getElementById('port-empty');
+    const newBtn = document.getElementById('port-new-btn');
+    const delBtn = document.getElementById('port-del-btn');
+
+    const ids = Object.keys(portfolios)
+      .sort((a, b) => (portfolios[a].createdAt || 0) - (portfolios[b].createdAt || 0));
+
+    // Update the dropdown
+    if (ids.length === 0) {
+      selectEl.innerHTML = '<option>No portfolios yet</option>';
+      selectEl.disabled = true;
+      emptyEl.classList.remove('hidden');
+      detailEl.style.display = 'none';
+      delBtn.disabled = true;
+      delBtn.style.opacity = '0.4';
+      newBtn.disabled = false;
+      newBtn.style.opacity = '';
+      return;
+    }
+    selectEl.disabled = false;
+    selectEl.innerHTML = ids.map(id =>
+      `<option value="${id}" ${id === currentPortId ? 'selected' : ''}>${safe(portfolios[id].name)}</option>`
+    ).join('');
+    emptyEl.classList.add('hidden');
+    detailEl.style.display = '';
+    delBtn.disabled = false;
+    delBtn.style.opacity = '';
+
+    // Cap reached?
+    if (ids.length >= MAX_PORTFOLIOS) {
+      newBtn.disabled = true;
+      newBtn.style.opacity = '0.4';
+      newBtn.title = `Limit of ${MAX_PORTFOLIOS} portfolios reached`;
+    } else {
+      newBtn.disabled = false;
+      newBtn.style.opacity = '';
+      newBtn.title = '';
+    }
+
+    if (!currentPortId) currentPortId = ids[0];
+    const port = portfolios[currentPortId];
+    if (!port) return;
+
+    document.getElementById('port-name').textContent = port.name || '—';
+    renderPortPositions();
+  }
+
+  function renderPortPositions() {
+    if (!currentPortId) return;
+    const port = portfolios[currentPortId];
+    if (!port) return;
+    const tbody = document.getElementById('port-body');
+    const empty = document.getElementById('port-positions-empty');
+    const positions = port.positions || {};
+    const syms = Object.keys(positions);
+
+    if (syms.length === 0) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+    } else {
+      empty.classList.add('hidden');
+    }
+
+    // Compute totals
+    let total = 0;
+    let prevTotal = 0;
+    const rowData = syms.map(sym => {
+      const pos = positions[sym] || {};
+      const qty = Number(pos.qty) || 0;
+      const px = prices[sym] || {};
+      const price = Number(px.price) || 0;
+      const pct = Number(px.percent);
+      // Derive prev close: if a stock, px has prevClose; for crypto we approximate
+      // prev = price / (1 + pct/100)
+      let prevPx = Number(px.prevClose);
+      if (!Number.isFinite(prevPx) || prevPx <= 0) {
+        if (Number.isFinite(pct) && price > 0) {
+          prevPx = price / (1 + pct / 100);
+        } else {
+          prevPx = price;
+        }
+      }
+      const value = qty * price;
+      const prevValue = qty * prevPx;
+      total += value;
+      prevTotal += prevValue;
+      return { sym, pos, qty, price, value, prevValue };
+    });
+
+    // Render header totals
+    document.getElementById('port-total-value').textContent = '$' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const change = total - prevTotal;
+    const changePct = prevTotal > 0 ? (change / prevTotal * 100) : 0;
+    const changeEl = document.getElementById('port-total-change');
+    if (Math.abs(change) < 0.005 || prevTotal === 0) {
+      changeEl.textContent = '—';
+      changeEl.className = 'port-total-change';
+    } else {
+      const sign = change >= 0 ? '+' : '-';
+      const absChg = Math.abs(change);
+      const absPct = Math.abs(changePct);
+      changeEl.textContent = sign + '$' + absChg.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' (' + sign + absPct.toFixed(2) + '%)';
+      changeEl.className = 'port-total-change ' + (change >= 0 ? 'up' : 'down');
+    }
+
+    if (syms.length === 0) return;
+
+    // Render rows
+    const html = rowData.map(({ sym, pos, qty, price, value }) => {
+      const crypto = isCrypto(sym);
+      const display = prettySymbol(sym, pos.tickerLabel);
+      const logo = pos.logoUrl
+        ? `<img class="logo" src="${safe(pos.logoUrl)}" onerror="this.outerHTML='<div class=\\'logo-fallback ${crypto?'crypto':''}\\'>${safe(display).slice(0,4)}</div>'" />`
+        : `<div class="logo-fallback ${crypto ? 'crypto' : ''}">${safe(display).slice(0,4)}</div>`;
+      const alloc = total > 0 ? (value / total * 100) : 0;
+      return `
+        <tr data-sym="${safe(sym)}">
+          <td>
+            <div class="asset">
+              ${logo}
+              <div class="meta">
+                <div class="sym ${crypto ? 'crypto' : ''}">${safe(display)}</div>
+                ${pos.name ? `<div class="name">${safe(pos.name)}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td><input type="number" class="qty-input" step="any" min="0" value="${qty}"
+                     onchange="updatePositionQty('${safe(sym)}', this.value)"
+                     onkeypress="if(event.key==='Enter') this.blur()" /></td>
+          <td><span class="price">${fmtPrice(price)}</span></td>
+          <td><span class="port-value">$${(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></td>
+          <td><span class="port-alloc">${alloc.toFixed(1)}%</span></td>
+          <td><button class="del" onclick="removePosition('${safe(sym)}')"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+    tbody.innerHTML = html;
+  }
+
+  // Re-render portfolio totals whenever prices change
+  // (the existing /prices listener already calls updatePricesInPlace + renderWatchlist;
+  // we also need to update the port if visible)
+  const _origPricesListener = db.ref('prices');
+  // Hook into the existing prices handling by wrapping renderPortPositions into the price update flow.
+  // Simplest: just call renderPortPositions on a timer alongside other ticking when port is visible.
+  setInterval(() => {
+    if (currentView === 'port' && currentPortId) renderPortPositions();
+  }, 5000);
+
+  // ============ PORTFOLIO SEARCH ============
+  let portSearchTimer = null;
+  function handlePortSearchInput() {
+    clearTimeout(portSearchTimer);
+    portSearchTimer = setTimeout(doPortSearch, 250);
+  }
+  async function doPortSearch() {
+    const q = document.getElementById('port-search').value.trim();
+    const box = document.getElementById('port-suggestions');
+    if (q.length < 1) { box.classList.add('hidden'); return; }
+    const [stocks, crypto] = await Promise.all([searchStocks(q), searchCrypto(q)]);
+    if (stocks.length === 0 && crypto.length === 0) { box.classList.add('hidden'); return; }
+    let html = '';
+    if (stocks.length) {
+      html += `<div class="sug-section">STOCKS</div>`;
+      html += stocks.map(s => {
+        const meta = encodeURIComponent(JSON.stringify(s));
+        return `<div class="sug" onclick="pickPortResult('${meta}')">
+          <span class="sym">${safe(s.symbol)}</span>
+          <span class="desc">${safe(s.name)}</span>
+        </div>`;
+      }).join('');
+    }
+    if (crypto.length) {
+      html += `<div class="sug-section">CRYPTO</div>`;
+      html += crypto.map(c => {
+        const meta = encodeURIComponent(JSON.stringify(c));
+        const logo = c.logoUrl ? `<img class="logo" src="${safe(c.logoUrl)}" onerror="this.style.display='none'" />` : '';
+        return `<div class="sug crypto" onclick="pickPortResult('${meta}')">
+          ${logo}
+          <span class="sym">${safe(c.tickerLabel)}</span>
+          <span class="desc">${safe(c.name)}</span>
+          <span class="pill">CRYPTO</span>
+        </div>`;
+      }).join('');
+    }
+    box.innerHTML = html;
+    box.classList.remove('hidden');
+  }
+  function pickPortResult(encodedMeta) {
+    try {
+      const meta = JSON.parse(decodeURIComponent(encodedMeta));
+      addPositionToPort(meta.symbol, meta);
+    } catch (e) { console.warn('pickPortResult failed:', e); }
+  }
+  // Click outside to close port-suggestions
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#port-search') && !e.target.closest('#port-suggestions')) {
+      const sug = document.getElementById('port-suggestions');
+      if (sug) sug.classList.add('hidden');
+    }
+  });
 </script>
 </body>
 </html>
